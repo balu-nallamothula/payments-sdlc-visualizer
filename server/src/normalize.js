@@ -121,6 +121,7 @@ export function normalizeRepos(raw) {
           url: r.url || null,
           path: r.path || null,
           branch: r.branch || null,
+          featureCommit: r.feature_commit || r.commit || null,
         };
       }
       return null;
@@ -313,6 +314,8 @@ export function normalizeJira({ id, relPath, meta }) {
     storyPoints: m.story_points ?? null,
     status: m.status || m.lifecycle_status || null,
     lifecycleStatus: m.lifecycle_status || null,
+    owner: m.owner || m.assignee || null,
+    labels: Array.isArray(m.labels) ? m.labels : [],
     currentStageN,
     prUrl: Array.isArray(m.pr_url) ? m.pr_url : m.pr_url ? [m.pr_url] : [],
     branchName: m.branch_name || null,

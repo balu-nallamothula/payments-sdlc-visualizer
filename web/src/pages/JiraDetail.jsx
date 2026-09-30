@@ -9,7 +9,12 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { ArtifactGrid } from '../components/ArtifactGrid';
 import { CountUp } from '../components/CountUp';
 import { useChat } from '../context/ChatContext';
-import { IconChat, IconExternal, IconPlay, IconTicket } from '../components/icons';
+import { IconChat, IconExternal, IconGit, IconPlay, IconTicket } from '../components/icons';
+
+// GitHub links from a normalized target repo (org/name → repo/branch/commit URLs).
+const repoBase = (r) => r.url || (r.organization && r.name ? `https://github.com/${r.organization}/${r.name}` : null);
+const shortSha = (s) => (s ? s.slice(0, 7) : '');
+const assigneeName = (owner) => (owner ? owner.split('@')[0] : 'Unassigned');
 
 export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
   const params = useParams();
@@ -139,6 +144,7 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
           cells={jira.stages}
           currentStageN={jira.currentStageN}
           owner={jira.owner}
+          variant="jira"
           onAction={activeCell ? () => chat.open(jira.id, `/seph-sdlc continue ${jira.id}`) : undefined}
         />
       </div>
@@ -167,39 +173,92 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
 
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 18 }}>
         <div className="card">
-          <h2>Repositories</h2>
-          {jira.targetRepositories.length === 0 ? (
-            <div className="muted">None recorded.</div>
-          ) : (
-            <ul className="md" style={{ paddingLeft: 18, margin: 0 }}>
-              {jira.targetRepositories.map((r, i) => (
-                <li key={i}>
-                  {r.url ? (
-                    <a href={r.url} target="_blank" rel="noreferrer">{r.name}</a>
-                  ) : (
-                    r.name
-                  )}
-                  {r.branch && <span className="muted mono" style={{ fontSize: 11 }}> · {r.branch}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+          <h2>Details</h2>
+          <div className="jira-details">
+            <div><span className="k">Status</span><span className="v">{jira.status || '—'}</span></div>
+            <div><span className="k">Story points</span><span className="v">{jira.storyPoints ?? '—'}</span></div>
+            <div><span className="k">Assignee</span><span className="v">{assigneeName(jira.owner)}</span></div>
+            <div><span className="k">Impact</span><span className="v">{jira.impactLevel || '—'}</span></div>
+            <div><span className="k">Epic</span><span className="v">{jira.epic || '—'}</span></div>
+            <div className="full">
+              <span className="k">Labels</span>
+              <span className="v">
+                {jira.labels && jira.labels.length ? (
+                  <span className="row wrap" style={{ gap: 6 }}>
+                    {jira.labels.map((l) => <span key={l} className="badge">{l}</span>)}
+                  </span>
+                ) : '—'}
+              </span>
+            </div>
+          </div>
         </div>
+
         <div className="card">
-          <h2>Links & flow</h2>
-          <ul className="md" style={{ paddingLeft: 18, margin: 0 }}>
-            {jira.prUrl.map((u, i) => (
-              <li key={i}>
-                <a href={u} target="_blank" rel="noreferrer">Pull request #{i + 1}</a>
-              </li>
-            ))}
-            {jira.branchName && (
-              <li className="muted">branch: <span className="mono">{jira.branchName}</span></li>
-            )}
-            {jira.blockedBy.length > 0 && <li>blocked by: {jira.blockedBy.join(', ')}</li>}
-            {jira.blocks.length > 0 && <li>blocks: {jira.blocks.join(', ')}</li>}
-            {jira.prUrl.length === 0 && !jira.branchName && <li className="muted">No PR/branch yet.</li>}
-          </ul>
+          <h2>Development</h2>
+          {jira.targetRepositories.length === 0 && jira.prUrl.length === 0 && !jira.branchName ? (
+            <div className="muted">No development activity recorded yet.</div>
+          ) : (
+            <>
+              {jira.targetRepositories.map((r, i) => {
+                const base = repoBase(r);
+                return (
+                  <div className="dev-repo" key={i}>
+                    <div className="dev-repo-name">
+                      {base ? (
+                        <a href={base} target="_blank" rel="noreferrer">
+                          {r.organization ? `${r.organization}/${r.name}` : r.name}
+                        </a>
+                      ) : (
+                        r.name || '—'
+                      )}
+                    </div>
+                    <div className="dev-repo-meta">
+                      {r.branch && (
+                        <span className="dev-item">
+                          <IconGit width={12} height={12} />
+                          {base ? (
+                            <a className="mono" href={`${base}/tree/${r.branch}`} target="_blank" rel="noreferrer">{r.branch}</a>
+                          ) : (
+                            <span className="mono">{r.branch}</span>
+                          )}
+                        </span>
+                      )}
+                      {r.featureCommit && (
+                        <span className="dev-item">
+                          commit
+                          {base ? (
+                            <a className="mono" href={`${base}/commit/${r.featureCommit}`} target="_blank" rel="noreferrer">{shortSha(r.featureCommit)}</a>
+                          ) : (
+                            <span className="mono">{shortSha(r.featureCommit)}</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {jira.branchName && jira.targetRepositories.length === 0 && (
+                <div className="dev-repo-meta">
+                  <span className="dev-item"><IconGit width={12} height={12} /> <span className="mono">{jira.branchName}</span></span>
+                </div>
+              )}
+              {jira.prUrl.length > 0 && (
+                <div className="dev-prs">
+                  {jira.prUrl.map((u, i) => (
+                    <a key={i} className="btn sm ghost" href={u} target="_blank" rel="noreferrer">
+                      <IconExternal width={13} height={13} /> PR #{i + 1}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {(jira.blockedBy.length > 0 || jira.blocks.length > 0) && (
+                <div className="dev-blocks">
+                  {jira.blockedBy.length > 0 && <div className="muted">Blocked by: {jira.blockedBy.join(', ')}</div>}
+                  {jira.blocks.length > 0 && <div className="muted">Blocks: {jira.blocks.join(', ')}</div>}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

@@ -1907,3 +1907,83 @@ tbody tr:hover {
   letter-spacing: 0.08em;
   color: var(--accent);
 }
+
+/* Stage hero inside a Jira ticket — visually distinct from the initiative hero. */
+.hero.is-jira {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+.hero.is-jira .icon {
+  background: linear-gradient(140deg, #3aa0ff 0%, #7c5cf0 100%);
+  box-shadow: 0 12px 26px rgba(60, 120, 240, 0.4);
+}
+
+/* Jira "Details" key/value grid. */
+.jira-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 22px;
+}
+.jira-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.jira-details .full {
+  grid-column: 1 / -1;
+}
+.jira-details .k {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.jira-details .v {
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* Jira "Development" card. */
+.dev-repo {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dev-repo:first-child {
+  padding-top: 0;
+}
+.dev-repo:last-child {
+  border-bottom: none;
+}
+.dev-repo-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.dev-repo-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.dev-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dev-prs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.dev-blocks {
+  margin-top: 12px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}

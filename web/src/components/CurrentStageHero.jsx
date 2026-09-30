@@ -3,7 +3,8 @@ import { IconCheck, IconPlay } from './icons';
 
 /** The "Current Stage" hero card for an initiative or jira. The icon tile runs
  *  the current stage in chat when `onAction` is provided. */
-export function CurrentStageHero({ cells, currentStageN, owner, onAction }) {
+export function CurrentStageHero({ cells, currentStageN, owner, onAction, variant }) {
+  const heroClass = `hero${variant === 'jira' ? ' is-jira' : ''}`;
   const total = cells.length ? Math.max(...cells.map((c) => c.n)) : 12;
   const stageCount = cells.length;
   const doneCount = cells.filter((c) => c.status === 'done' || c.status === 'skipped').length;
@@ -17,7 +18,7 @@ export function CurrentStageHero({ cells, currentStageN, owner, onAction }) {
 
   if (!current) {
     return (
-      <div className="hero">
+      <div className={heroClass}>
         <div className="icon">
           <IconCheck width={30} height={30} />
         </div>
@@ -34,7 +35,7 @@ export function CurrentStageHero({ cells, currentStageN, owner, onAction }) {
   const agg = current.aggregate && current.aggregate.total > 0 ? ` · ${current.aggregate.done}/${current.aggregate.total}` : '';
 
   return (
-    <div className="hero">
+    <div className={heroClass}>
       {onAction ? (
         <button className="icon" onClick={onAction} title="Run this stage in chat" style={{ border: 'none', padding: 0, cursor: 'pointer' }}>
           <IconPlay width={30} height={30} className="nudge" />
