@@ -1709,3 +1709,41 @@ tbody tr:hover {
   padding: 2px 5px;
   outline: none;
 }
+
+/* App confirm dialog — in-app, themed replacement for window.confirm.
+   Sits above the chat dock (z 50) and the artifact modal (z 40/41). */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 14, 40, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+.confirm-card {
+  width: min(440px, 96vw);
+  box-shadow: var(--shadow-lg);
+}
+.confirm-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.confirm-message {
+  margin: 0 0 20px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn.danger {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: #fff;
+}

@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider, useChat } from './context/ChatContext';
 import { GitProvider } from './context/GitContext';
 import { CurrentInitiativeProvider } from './context/CurrentInitiativeContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { ChatPanel } from './components/ChatPanel';
@@ -71,7 +72,9 @@ export function App() {
       <GitProvider>
         <ChatProvider>
           <CurrentInitiativeProvider>
-            <Shell />
+            <ConfirmProvider>
+              <Shell />
+            </ConfirmProvider>
           </CurrentInitiativeProvider>
         </ChatProvider>
       </GitProvider>
