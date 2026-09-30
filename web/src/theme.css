@@ -1987,3 +1987,200 @@ tbody tr:hover {
   flex-direction: column;
   gap: 3px;
 }
+
+/* Jira detail redesign — ticket-dashboard header, key/value cards, activity. */
+.jira-banner {
+  position: relative;
+}
+.jira-actions {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  display: flex;
+  gap: 8px;
+}
+.jira-head {
+  display: grid;
+  grid-template-columns: 1fr minmax(210px, 300px);
+  gap: 24px;
+  align-items: start;
+  margin-top: 12px;
+}
+.jira-key {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+.jira-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 2px 0 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.jira-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 14px 20px;
+  margin-top: 18px;
+}
+.jira-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.jira-meta .k,
+.jira-head-side .k {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.jira-meta .v {
+  font-size: 13px;
+  word-break: break-word;
+}
+.jira-assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.jira-head-side {
+  border-left: 1px solid var(--border);
+  padding-left: 20px;
+}
+.jira-progress-count {
+  font-size: 20px;
+  margin-top: 4px;
+}
+.jira-progress-count strong {
+  font-weight: 800;
+}
+.jira-progress-bar {
+  height: 8px;
+  background: var(--panel-3);
+  margin-top: 10px;
+  overflow: hidden;
+}
+.jira-progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3aa0ff, #7c5cf0);
+}
+.jira-progress-pct {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: right;
+}
+.jira-current {
+  margin-top: 16px;
+}
+.jira-current .v {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shared key/value list for Details / Development cards. */
+.kv {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px 14px;
+  align-items: baseline;
+}
+.kv .k {
+  color: var(--muted);
+  font-size: 12px;
+}
+.kv .v {
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* Stage activity timeline. */
+.stage-activity {
+  display: flex;
+  flex-direction: column;
+}
+.sa-row {
+  display: grid;
+  grid-template-columns: 20px 28px minmax(130px, 1.3fr) auto 92px 64px minmax(0, 2fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 10px 6px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+.sa-row:first-child {
+  border-top: none;
+}
+.sa-row:hover,
+.sa-row.is-selected {
+  background: var(--panel-2);
+}
+.sa-status {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+}
+.sa-status.sa-done,
+.sa-status.sa-skipped {
+  background: var(--ok);
+}
+.sa-status.sa-active {
+  background: var(--warn);
+}
+.sa-status.sa-blocked {
+  background: var(--crit);
+}
+.sa-status.sa-pending {
+  background: transparent;
+  border: 1.5px dashed var(--border-strong);
+}
+.sa-n {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sa-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.sa-date,
+.sa-time {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sa-msg {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
