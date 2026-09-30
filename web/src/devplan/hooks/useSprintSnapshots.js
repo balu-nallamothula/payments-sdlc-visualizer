@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage.js";
 import { KEYS, SPRINT_DATES, SPRINT_END } from "../config.js";
 import { sprintLabel, emptyComposition, composeByStatus } from "../derive.js";
@@ -66,16 +66,48 @@ function build(num, issues) {
   };
 }
 
+// The old store was a flat { [num]: snap } map shared across every board; it is
+// now scoped per board (its set of loaded epics) so one epic's frozen sprints
+// never show under another. Detect the legacy flat shape (purely-numeric top
+// keys) and drop it on first write.
+function isLegacyStore(store) {
+  return !!store && Object.keys(store).some((k) => /^\d+$/.test(k));
+}
+
 export function useSprintSnapshots(allIssues) {
-  const [snapshots, setSnapshots] = useLocalStorage(KEYS.snapshots, {});
+  const [store, setStore] = useLocalStorage(KEYS.snapshots, {});
+
+  // Board identity = its sorted set of loaded epic keys (e.g. "PAY-7585").
+  const boardKey = useMemo(
+    () => [...new Set(allIssues.map((i) => i._epic).filter(Boolean))].sort().join(","),
+    [allIssues]
+  );
+
+  // Current board's snapshots (ignore legacy flat data).
+  const scoped = boardKey && !isLegacyStore(store) ? store[boardKey] || {} : {};
+
+  // Apply an update to the current board's slice only.
+  const commit = useCallback(
+    (updater) => {
+      if (!boardKey) return;
+      setStore((prev) => {
+        const base = isLegacyStore(prev) ? {} : prev || {};
+        const cur = base[boardKey] || {};
+        const nextSlice = updater(cur);
+        if (nextSlice === cur) return prev;
+        return { ...base, [boardKey]: nextSlice };
+      });
+    },
+    [boardKey, setStore]
+  );
 
   useEffect(() => {
-    if (!allIssues.length) return;
+    if (!allIssues.length || !boardKey) return;
     const finished = finishedSprintNums(allIssues);
     if (!finished.length) return;
-    setSnapshots((prev) => {
+    commit((cur) => {
       let changed = false;
-      const next = { ...prev };
+      const next = { ...cur };
       finished.forEach((num) => {
         if (next[String(num)]) return; // freeze once — never overwrite automatically
         const snap = build(num, allIssues);
@@ -83,39 +115,42 @@ export function useSprintSnapshots(allIssues) {
         next[String(num)] = snap;
         changed = true;
       });
-      return changed ? next : prev;
+      return changed ? next : cur;
     });
-  }, [allIssues, setSnapshots]);
+  }, [allIssues, boardKey, commit]);
 
   // Manual re-freeze with the current board state (useful on first run, when a
   // sprint had already rolled over before this feature existed).
   const recapture = useCallback(
-    (num) => setSnapshots((prev) => ({ ...prev, [String(num)]: build(num, allIssues) })),
-    [allIssues, setSnapshots]
+    (num) => commit((cur) => ({ ...cur, [String(num)]: build(num, allIssues) })),
+    [allIssues, commit]
   );
   const removeSnapshot = useCallback(
     (num) =>
-      setSnapshots((prev) => {
-        const next = { ...prev };
+      commit((cur) => {
+        const next = { ...cur };
         delete next[String(num)];
         return next;
       }),
-    [setSnapshots]
+    [commit]
   );
-  const clearSnapshots = useCallback(() => setSnapshots({}), [setSnapshots]);
+  const clearSnapshots = useCallback(() => commit(() => ({})), [commit]);
 
-  // Replace all snapshots from an imported list. Exports carry snapshots as an
-  // array; internally we key them by String(number), so convert back.
-  const replaceSnapshots = useCallback((listOrObj) => {
-    if (Array.isArray(listOrObj)) {
-      const obj = {};
-      listOrObj.forEach((s) => { if (Number.isFinite(s?.number)) obj[String(s.number)] = s; });
-      setSnapshots(obj);
-    } else {
-      setSnapshots(listOrObj && typeof listOrObj === "object" ? listOrObj : {});
-    }
-  }, [setSnapshots]);
+  // Replace this board's snapshots from an imported list. Exports carry snapshots
+  // as an array; internally we key them by String(number), so convert back.
+  const replaceSnapshots = useCallback(
+    (listOrObj) => {
+      let obj = {};
+      if (Array.isArray(listOrObj)) {
+        listOrObj.forEach((s) => { if (Number.isFinite(s?.number)) obj[String(s.number)] = s; });
+      } else if (listOrObj && typeof listOrObj === "object") {
+        obj = listOrObj;
+      }
+      commit(() => obj);
+    },
+    [commit]
+  );
 
-  const list = Object.values(snapshots).sort((a, b) => b.number - a.number);
+  const list = Object.values(scoped).sort((a, b) => b.number - a.number);
   return { snapshots: list, recapture, removeSnapshot, clearSnapshots, replaceSnapshots };
 }
