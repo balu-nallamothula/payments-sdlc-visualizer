@@ -11,7 +11,10 @@ import { CountUp } from '../components/CountUp';
 import { LiveToggle } from '../components/LiveToggle';
 import { useChat } from '../context/ChatContext';
 import { useSSE } from '../hooks/useSSE';
-import { IconArrowLeft, IconChat, IconPlay, IconStar } from '../components/icons';
+import { IconArrowLeft, IconCalendar, IconChat, IconPlay, IconStar } from '../components/icons';
+
+// Jira issue-key shape (e.g. PAY-6883); filters out placeholder epic refs.
+const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
 
 export function InitiativeDetailPage({ name: nameProp }) {
   const params = useParams();
@@ -43,6 +46,13 @@ export function InitiativeDetailPage({ name: nameProp }) {
       });
     },
     [setSearchParams],
+  );
+
+  // Distinct real epic keys this initiative's Jiras roll up to — used to preload
+  // the Dev Plan board with the initiative's content.
+  const epicKeys = useMemo(
+    () => [...new Set((detail?.jiras || []).map((j) => j.epic).filter((k) => k && EPIC_KEY_RE.test(k)))],
+    [detail],
   );
 
   const load = useCallback(() => {
@@ -159,6 +169,15 @@ export function InitiativeDetailPage({ name: nameProp }) {
             >
               <IconPlay width={13} height={13} className="nudge" /> Continue stage {continueInfo.n}
             </button>
+          )}
+          {epicKeys.length > 0 && (
+            <Link
+              className="btn sm"
+              to={`/dev-plan?epics=${encodeURIComponent(epicKeys.join(','))}`}
+              title={`Open ${epicKeys.join(', ')} in the Dev Plan board`}
+            >
+              <IconCalendar width={15} height={15} /> Open in Dev Plan
+            </Link>
           )}
           <button className="btn sm primary" onClick={() => chat.open(name)}>
             <IconChat width={15} height={15} /> Run in chat

@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import "./board.css";
+import { apiClient } from "../api/client.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { SYSTEMS, DEFAULT_SPRINTS, DEFAULT_FILTERS } from "./config.js";
 import { enrichIssue, presentSystems, shortName, uid, flattenIssues } from "./derive.js";
@@ -34,6 +36,9 @@ const PAGES = [
 // Map the Jira connection colour onto a host badge variant.
 const CONN_BADGE = { green: "ok", red: "crit", yellow: "warn" };
 
+// Jira issue-key shape (e.g. PAY-6883), for filtering initiative epic refs.
+const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
+
 // The adapted board root. Renders inside the host Shell content area (already
 // wrapped in .devplan-root by DevPlan.jsx) — the host provides the sidebar,
 // topbar and page scroll, so this drops the board's own chrome and swaps it for
@@ -46,6 +51,14 @@ export default function DevPlanApp() {
   const [teamOpen, setTeamOpen] = useState(true);
   const [activePage, setActivePage] = useState("board");
   const [kpisOpen, setKpisOpen] = useLocalStorage("devplan:kpisOpen", true);
+
+  // Preload: epics to load on open. Explicit ?epics= (from "Open in Dev Plan" on
+  // an initiative) wins; otherwise fall back to the last-viewed initiative's epics
+  // when the board has no data yet (so it doesn't clobber a board you built).
+  const [searchParams] = useSearchParams();
+  const explicitEpics = searchParams.get("epics");
+  const [preloadKeys, setPreloadKeys] = useState([]);
+  const didPreload = useRef(false);
 
   const showToast = useCallback((msg, error = false) => setToast({ msg, error, id: Math.random() }), []);
   useEffect(() => {
@@ -60,7 +73,7 @@ export default function DevPlanApp() {
     ({ epics: keys, changes }) => history.record(buildSyncRecord({ keys, changes, id: uid(), ts: Date.now() })),
     [history.record]
   );
-  const jira = useJira(showToast, recordSync);
+  const jira = useJira(showToast, recordSync, { autoRestore: !explicitEpics });
   const allIssues = useMemo(
     () => flattenIssues(jira.epics, (i, ep) => enrichIssue({ ...i, _epic: ep.key, _epicColor: ep.color })),
     [jira.epics]
@@ -80,6 +93,39 @@ export default function DevPlanApp() {
   });
 
   useEffect(() => { if (jira.hasData) setSetupOpen(false); }, [jira.hasData]);
+
+  // Resolve and load the preload epics once on mount.
+  useEffect(() => {
+    if (didPreload.current) return;
+    didPreload.current = true;
+    let cancelled = false;
+    (async () => {
+      let keys = [];
+      if (explicitEpics) {
+        keys = explicitEpics.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+      } else if (!jira.hasData) {
+        let initName = null;
+        try { initName = localStorage.getItem("sdlc-current-initiative"); } catch { /* ignore */ }
+        if (initName) {
+          try {
+            const d = await apiClient.initiative(initName);
+            keys = [...new Set((d.jiras || []).map((j) => j.epic).filter((k) => k && EPIC_KEY_RE.test(k)))];
+          } catch { /* no server / not found → skip preload */ }
+        }
+      }
+      if (cancelled || !keys.length) return;
+      setPreloadKeys(keys);
+      if (jira.token) {
+        jira.loadEpics(keys);
+        setSetupOpen(false);
+      } else {
+        setSetupOpen(true); // prompt connect with the keys prefilled
+      }
+    })();
+    return () => { cancelled = true; };
+    // Run once on mount; explicitEpics/token/hasData are read at mount time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const hasData = jira.hasData;
   const epicLabel = Object.values(jira.epics).map((e) => shortName(e)).join(" + ");
@@ -130,8 +176,9 @@ export default function DevPlanApp() {
 
       {setupOpen && (
         <SetupPanel
+          key={preloadKeys.join(",") || "setup"}
           token={jira.token} setToken={jira.setToken} log={jira.log} busy={jira.busy}
-          initialKeys={Object.keys(jira.epics)}
+          initialKeys={preloadKeys.length ? preloadKeys : Object.keys(jira.epics)}
           onTest={jira.doTest} onClear={jira.clearToken} onLoad={onLoad}
           onImport={io.onImportBoard}
         />

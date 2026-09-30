@@ -32,7 +32,7 @@ function computeSyncDiff(oldMap, newEpics) {
 
 // Connection + epic loading. Owns token/conn/epics/busy/log, the auto-restore,
 // and the sync diff (what changed in Jira since the last pull).
-export function useJira(showToast, onSyncEvent) {
+export function useJira(showToast, onSyncEvent, { autoRestore = true } = {}) {
   const [token, setToken] = useLocalStorage(KEYS.token, "");
   const [loadedKeys, setLoadedKeys] = useLocalStorage(KEYS.loaded, []);
   // Board snapshot persists across sessions so it's visible before any Jira call
@@ -100,14 +100,16 @@ export function useJira(showToast, onSyncEvent) {
     loadEpicsRef.current = loadEpics;
   });
 
+  // Skip auto-restore when the caller is preloading specific epics (e.g. opened
+  // from an initiative with ?epics=…), so the URL intent wins over the cache.
   const didAuto = useRef(false);
   useEffect(() => {
-    if (didAuto.current) return;
+    if (didAuto.current || !autoRestore) return;
     didAuto.current = true;
     if (!Object.keys(epicsRef.current).length && tokenRef.current && loadedKeysRef.current.length) {
       loadEpicsRef.current(loadedKeysRef.current, { silent: true });
     }
-  }, []);
+  }, [autoRestore]);
 
   const doTest = useCallback(async () => {
     try {
