@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- pipeline connectors -->
+  <line x1="104" y1="256" x2="256" y2="256" stroke="#22c55e" stroke-width="22" stroke-linecap="round" />
+  <line x1="256" y1="256" x2="408" y2="256" stroke="#c7cad6" stroke-width="22" stroke-linecap="round" />
+  <!-- done node (left) -->
+  <circle cx="104" cy="256" r="46" fill="#ffffff" stroke="#22c55e" stroke-width="24" />
+  <!-- active node (center) -->
+  <circle cx="256" cy="256" r="88" fill="#ffffff" stroke="#22c55e" stroke-width="30" />
+  <circle cx="256" cy="256" r="46" fill="#86efac" />
+  <!-- pending node (right) -->
+  <circle cx="408" cy="256" r="46" fill="#ffffff" stroke="#c7cad6" stroke-width="24" />
+</svg>
