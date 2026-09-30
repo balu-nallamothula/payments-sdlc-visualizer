@@ -1771,28 +1771,104 @@ tbody tr:hover {
   color: #fff;
 }
 
-/* Branch switcher (sephora-project-docs) on the initiative header. */
-.branch-switcher {
+/* Branch switcher (sephora-project-docs) — filterable combobox. */
+.branch-combo {
+  position: relative;
+  display: inline-flex;
+}
+.branch-combo-trigger {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
-}
-.branch-switcher select {
   font: inherit;
   font-size: 12px;
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
   padding: 4px 8px;
-  max-width: 220px;
+  max-width: 240px;
   cursor: pointer;
   outline: none;
 }
-.branch-switcher select:hover {
+.branch-combo-trigger:hover {
   border-color: var(--border-strong);
 }
-.branch-switcher select:disabled {
+.branch-combo-trigger:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.branch-combo-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-combo-caret {
+  color: var(--muted);
+  margin-left: auto;
+}
+.branch-combo-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 45;
+  width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+}
+.branch-combo-input {
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  outline: none;
+}
+.branch-combo-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 280px;
+  overflow: auto;
+}
+.branch-combo-opt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.branch-combo-opt.is-active {
+  background: var(--panel-3);
+}
+.branch-combo-opt.is-current {
+  color: var(--accent);
+  font-weight: 600;
+}
+.branch-combo-tick {
+  display: inline-flex;
+  width: 14px;
+  flex: 0 0 14px;
+  color: var(--accent);
+}
+.branch-combo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-combo-empty {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 12px;
 }
