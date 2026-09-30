@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider, useChat } from './context/ChatContext';
 import { GitProvider } from './context/GitContext';
@@ -9,7 +9,6 @@ import { TopBar } from './components/TopBar';
 import { ChatPanel } from './components/ChatPanel';
 import { ChatRail } from './components/ChatRail';
 import { IconChat } from './components/icons';
-import { DashboardPage } from './pages/Dashboard';
 import { InitiativesPage } from './pages/Initiatives';
 import { InitiativeRoute } from './pages/InitiativeRoute';
 import { StagesPage } from './pages/Stages';
@@ -51,7 +50,7 @@ function Shell() {
         <TopBar />
         <div className="content">
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<Navigate to="/initiatives" replace />} />
             <Route path="/initiatives" element={<InitiativesPage />} />
             <Route path="/initiatives/*" element={<InitiativeRoute />} />
             <Route path="/stages" element={<StagesPage />} />

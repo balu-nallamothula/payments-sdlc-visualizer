@@ -3,7 +3,6 @@ import { useCurrentInitiative } from '../context/CurrentInitiativeContext';
 import {
   IconCalendar,
   IconChevronLeft,
-  IconDashboard,
   IconDoc,
   IconLayers,
   IconPlug,
@@ -11,10 +10,6 @@ import {
 } from './icons';
 
 const SECTIONS = [
-  {
-    title: 'Overview',
-    items: [{ to: '/', label: 'Dashboard', icon: IconDashboard, end: true }],
-  },
   {
     title: 'Workflow',
     items: [
