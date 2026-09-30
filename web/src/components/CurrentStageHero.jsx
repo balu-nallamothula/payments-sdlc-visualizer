@@ -1,5 +1,5 @@
-import { STAGE_FOCUS, STATUS_LABEL } from '../lib/stages';
-import { IconCheck, IconPlay, IconTarget } from './icons';
+import { STATUS_LABEL } from '../lib/stages';
+import { IconCheck, IconPlay } from './icons';
 
 /** The "Current Stage" hero card for an initiative or jira. The icon tile runs
  *  the current stage in chat when `onAction` is provided. */
@@ -55,15 +55,6 @@ export function CurrentStageHero({ cells, currentStageN, owner, onAction }) {
         <div className="sub">
           Stage {String(current.n).padStart(2, '0')} of {total}
           {agg}
-        </div>
-      </div>
-      <div className="focus">
-        <span className="fi">
-          <IconTarget width={20} height={20} />
-        </span>
-        <div>
-          <div className="label" style={{ color: 'var(--accent)' }}>Focus</div>
-          <div className="sub" style={{ maxWidth: 320 }}>{STAGE_FOCUS[current.n]}</div>
         </div>
       </div>
       <div className="meta">
