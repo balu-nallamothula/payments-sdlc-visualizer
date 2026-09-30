@@ -11,7 +11,7 @@ import { getStages, getStage, getReferenceDoc } from '../services/coaching.js';
 import { readArtifact, writeArtifact, listArtifacts } from '../services/artifacts.js';
 import { buildInitiativePipeline, CANONICAL_STAGES } from '../normalize.js';
 import { docsWatcher } from '../services/watcher.js';
-import { gitStatus, gitCommit } from '../services/git.js';
+import { gitStatus, gitCommit, gitBranches, gitCheckout } from '../services/git.js';
 import { suggestCommitMessage } from '../services/commitMessage.js';
 import { jiraMyself, jiraIssue, jiraEpicIssues, isValidIssueKey } from '../services/jira.js';
 
@@ -89,6 +89,25 @@ api.get('/git/status', async (req, res, next) => {
   try {
     res.json(await gitStatus());
   } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/git/branches', async (req, res, next) => {
+  try {
+    res.json(await gitBranches());
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.post('/git/checkout', async (req, res, next) => {
+  try {
+    const { branch } = req.body || {};
+    res.json(await gitCheckout(branch));
+  } catch (err) {
+    const map = { BAD_REQUEST: 400, CONFLICT: 409 };
+    if (err.code && map[err.code]) return res.status(map[err.code]).json({ error: err.message });
     next(err);
   }
 });

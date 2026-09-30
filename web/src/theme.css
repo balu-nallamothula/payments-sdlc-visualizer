@@ -1747,3 +1747,29 @@ tbody tr:hover {
   border-color: var(--crit);
   color: #fff;
 }
+
+/* Branch switcher (sephora-project-docs) on the initiative header. */
+.branch-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.branch-switcher select {
+  font: inherit;
+  font-size: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  max-width: 220px;
+  cursor: pointer;
+  outline: none;
+}
+.branch-switcher select:hover {
+  border-color: var(--border-strong);
+}
+.branch-switcher select:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

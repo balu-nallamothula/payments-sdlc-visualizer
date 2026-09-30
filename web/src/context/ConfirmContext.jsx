@@ -51,9 +51,11 @@ export function ConfirmProvider({ children }) {
             <h3 id="confirm-title" className="confirm-title">{state.title}</h3>
             {state.message && <p className="confirm-message">{state.message}</p>}
             <div className="confirm-actions">
-              <button type="button" className="btn" onClick={() => settle(false)}>
-                {state.cancelLabel}
-              </button>
+              {!state.alert && (
+                <button type="button" className="btn" onClick={() => settle(false)}>
+                  {state.cancelLabel}
+                </button>
+              )}
               <button
                 ref={confirmBtn}
                 type="button"

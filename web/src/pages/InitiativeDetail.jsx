@@ -9,6 +9,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { ArtifactGrid } from '../components/ArtifactGrid';
 import { CountUp } from '../components/CountUp';
 import { LiveToggle } from '../components/LiveToggle';
+import { BranchSwitcher } from '../components/BranchSwitcher';
 import { useChat } from '../context/ChatContext';
 import { useCurrentInitiative } from '../context/CurrentInitiativeContext';
 import { useSSE } from '../hooks/useSSE';
@@ -154,6 +155,7 @@ export function InitiativeDetailPage({ name: nameProp }) {
           <div className="page-sub">{initiative.relPath}</div>
         </div>
         <div className="row wrap" style={{ gap: 8, justifyContent: 'flex-end' }}>
+          <BranchSwitcher />
           <span className={`badge ${initiative.phase === 'per-jira' ? 'rose' : 'violet'}`}>{initiative.phase}</span>
           {initiative.greenfield && <span className="badge">greenfield</span>}
           {initiative.lateEntry && <span className="badge warn">late entry</span>}

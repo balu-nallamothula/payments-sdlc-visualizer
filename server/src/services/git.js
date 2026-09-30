@@ -29,6 +29,45 @@ export async function gitStatus() {
   return { branch, files };
 }
 
+/** Local branches + the current one. */
+export async function gitBranches() {
+  const [listRes, curRes] = await Promise.all([
+    exec('git', ['-C', DIR, 'branch', '--format=%(refname:short)']),
+    exec('git', ['-C', DIR, 'rev-parse', '--abbrev-ref', 'HEAD']).catch(() => ({ stdout: '' })),
+  ]);
+  const branches = listRes.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+  return { current: curRes.stdout.trim() || null, branches };
+}
+
+/** Switch to an existing local branch. Never forces — a checkout that would
+ *  discard uncommitted changes fails, and the caller surfaces the reason. */
+export async function gitCheckout(branch) {
+  if (!branch || typeof branch !== 'string') {
+    const e = new Error('branch required');
+    e.code = 'BAD_REQUEST';
+    throw e;
+  }
+  // execFile is injection-safe, but restrict to a known local branch so a typo
+  // can't create a branch or detach HEAD.
+  const { branches } = await gitBranches();
+  if (!branches.includes(branch)) {
+    const e = new Error(`Unknown branch: ${branch}`);
+    e.code = 'BAD_REQUEST';
+    throw e;
+  }
+  try {
+    const { stdout } = await exec('git', ['-C', DIR, 'checkout', branch]);
+    return { ok: true, branch, output: stdout.trim() };
+  } catch (err) {
+    const e = new Error(
+      (err.stderr || err.message || '').trim() ||
+        'Could not switch branch (commit or stash your changes first).',
+    );
+    e.code = 'CONFLICT';
+    throw e;
+  }
+}
+
 /** Stage the given paths (or all) and commit with a message. */
 export async function gitCommit(message, paths) {
   if (!message || !message.trim()) {

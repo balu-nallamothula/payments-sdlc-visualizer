@@ -54,6 +54,25 @@ export const apiClient = {
     return res.json();
   },
   gitStatus: () => get('/api/git/status'),
+  gitBranches: () => get('/api/git/branches'),
+  gitCheckout: async (branch) => {
+    const res = await fetch('/api/git/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branch }),
+    });
+    if (!res.ok) {
+      let msg = `${res.status} ${res.statusText}`;
+      try {
+        const body = await res.json();
+        if (body?.error) msg = body.error;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(msg);
+    }
+    return res.json();
+  },
   suggestCommitMessage: async () => {
     const res = await fetch('/api/git/suggest-message', { method: 'POST' });
     if (!res.ok) {
