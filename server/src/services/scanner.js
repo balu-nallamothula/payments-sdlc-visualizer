@@ -6,7 +6,19 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { config, yearDir } from '../config.js';
-import { normalizeInitiative, normalizeJira } from '../normalize.js';
+import { normalizeInitiative, normalizeJira, buildInitiativePipeline } from '../normalize.js';
+
+// The stage the pipeline is actually working on — matches the detail view's
+// CurrentStageHero: active, else blocked, else first not-done; else the last
+// stage when everything is complete.
+function deriveCurrentStage(cells) {
+  const c =
+    cells.find((x) => x.status === 'active') ||
+    cells.find((x) => x.status === 'blocked') ||
+    cells.find((x) => x.status !== 'done' && x.status !== 'skipped');
+  if (c) return c.n;
+  return cells.length ? Math.max(...cells.map((x) => x.n)) : null;
+}
 
 const cache = new Map(); // key -> { mtimeMs, value }
 
@@ -103,8 +115,16 @@ export async function listInitiatives() {
       cache.set(cacheKey, { mtimeMs, value: meta });
     }
     if (!meta) continue;
-    const jiraDirCount = await countJiraDirs(d.absPath);
-    out.push(normalizeInitiative({ id: d.id, relPath: d.relPath, meta, jiraDirCount }));
+    // Read the jiras and build the SAME 12-cell pipeline the detail view uses, so
+    // the card's percent / stage / strip match the detail (stages 5-12 aggregate
+    // across the jiras, not the initiative's own current_stage pointer).
+    const jiras = await listJiras(d.absPath);
+    const summary = normalizeInitiative({ id: d.id, relPath: d.relPath, meta, jiraDirCount: jiras.length });
+    const pipeline = buildInitiativePipeline(summary, jiras);
+    summary.percent = pipeline.percent;
+    summary.cells = pipeline.cells;
+    summary.currentStageN = deriveCurrentStage(pipeline.cells) ?? summary.currentStageN;
+    out.push(summary);
   }
   // Newest-ish first, then alphabetical.
   out.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '') || a.id.localeCompare(b.id));

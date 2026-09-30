@@ -23,8 +23,13 @@ export const STATUS_LABEL = {
   blocked: 'Blocked',
 };
 
-/** Build a rough 12-cell strip for a summary card (detail view computes the precise one). */
+/** 12-cell strip for a summary card. The list endpoint now attaches the precise
+ *  aggregated cells (same as the detail view); fall back to a rough estimate for
+ *  any payload that predates that. */
 export function summaryCells(init) {
+  if (Array.isArray(init.cells) && init.cells.length) {
+    return init.cells.map((c) => ({ n: c.n, status: c.status }));
+  }
   const cells = [];
   const cur = init.currentStageN ?? 0;
   for (let n = 1; n <= 12; n++) {
