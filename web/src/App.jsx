@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider, useChat } from './context/ChatContext';
 import { GitProvider } from './context/GitContext';
+import { CurrentInitiativeProvider } from './context/CurrentInitiativeContext';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { ChatPanel } from './components/ChatPanel';
@@ -70,7 +71,9 @@ export function App() {
     <ThemeProvider>
       <GitProvider>
         <ChatProvider>
-          <Shell />
+          <CurrentInitiativeProvider>
+            <Shell />
+          </CurrentInitiativeProvider>
         </ChatProvider>
       </GitProvider>
     </ThemeProvider>

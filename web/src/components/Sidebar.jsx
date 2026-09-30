@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useCurrentInitiative } from '../context/CurrentInitiativeContext';
 import {
   IconCalendar,
   IconChevronLeft,
@@ -25,13 +26,17 @@ const SECTIONS = [
     title: 'Resources',
     items: [
       { to: '/artifacts', label: 'Artifacts', icon: IconDoc },
-      { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar },
+      { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar, devPlan: true },
       { to: '/integrations', label: 'Integrations', icon: IconPlug },
     ],
   },
 ];
 
 export function Sidebar({ collapsed, onToggleCollapse }) {
+  const { current } = useCurrentInitiative();
+  // The Dev Plan link carries the currently-selected initiative so opening it
+  // shows that initiative's board (and follows a new selection).
+  const devPlanTo = current ? `/dev-plan?initiative=${encodeURIComponent(current)}` : '/dev-plan';
   return (
     <aside className="sidebar">
       <div className="logo">
@@ -46,10 +51,11 @@ export function Sidebar({ collapsed, onToggleCollapse }) {
           <div className="section">{section.title}</div>
           {section.items.map((item) => {
             const Icon = item.icon;
+            const to = item.devPlan ? devPlanTo : item.to;
             return (
               <NavLink
-                key={item.to}
-                to={item.to}
+                key={item.label}
+                to={to}
                 end={item.end}
                 className={({ isActive }) => `navlink ${isActive ? 'active' : ''}`}
                 title={item.label}

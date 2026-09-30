@@ -39,6 +39,10 @@ const CONN_BADGE = { green: "ok", red: "crit", yellow: "warn" };
 // Jira issue-key shape (e.g. PAY-6883), for filtering initiative epic refs.
 const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
 
+// Distinct real epic keys an initiative's Jiras roll up to.
+const epicsOfInitiative = (d) =>
+  [...new Set((d?.jiras || []).map((j) => j.epic).filter((k) => k && EPIC_KEY_RE.test(k)))];
+
 // The adapted board root. Renders inside the host Shell content area (already
 // wrapped in .devplan-root by DevPlan.jsx) — the host provides the sidebar,
 // topbar and page scroll, so this drops the board's own chrome and swaps it for
@@ -52,13 +56,18 @@ export default function DevPlanApp() {
   const [activePage, setActivePage] = useState("board");
   const [kpisOpen, setKpisOpen] = useLocalStorage("devplan:kpisOpen", true);
 
-  // Preload: epics to load on open. Explicit ?epics= (from "Open in Dev Plan" on
-  // an initiative) wins; otherwise fall back to the last-viewed initiative's epics
-  // when the board has no data yet (so it doesn't clobber a board you built).
+  // Preload: which epics to show on open, resolved from the URL. `?epics=` is a
+  // direct list; `?initiative=<name>` (from the sidebar / "Open in Dev Plan") is
+  // resolved to that initiative's epics. Either overrides the cached board and
+  // follows a new selection. With no param, fall back once to the last-viewed
+  // initiative — but only when the board is empty, so it never clobbers a board
+  // you built manually.
   const [searchParams] = useSearchParams();
   const explicitEpics = searchParams.get("epics");
+  const initiativeParam = searchParams.get("initiative");
   const [preloadKeys, setPreloadKeys] = useState([]);
-  const didPreload = useRef(false);
+  const loadedSig = useRef(null); // signature of the last target we loaded
+  const didFallback = useRef(false);
 
   const showToast = useCallback((msg, error = false) => setToast({ msg, error, id: Math.random() }), []);
   useEffect(() => {
@@ -73,7 +82,7 @@ export default function DevPlanApp() {
     ({ epics: keys, changes }) => history.record(buildSyncRecord({ keys, changes, id: uid(), ts: Date.now() })),
     [history.record]
   );
-  const jira = useJira(showToast, recordSync, { autoRestore: !explicitEpics });
+  const jira = useJira(showToast, recordSync, { autoRestore: !explicitEpics && !initiativeParam });
   const allIssues = useMemo(
     () => flattenIssues(jira.epics, (i, ep) => enrichIssue({ ...i, _epic: ep.key, _epicColor: ep.color })),
     [jira.epics]
@@ -94,26 +103,36 @@ export default function DevPlanApp() {
 
   useEffect(() => { if (jira.hasData) setSetupOpen(false); }, [jira.hasData]);
 
-  // Resolve and load the preload epics once on mount.
+  // Resolve the preload target from the URL and load it. Re-runs when the target
+  // changes (e.g. picking a different initiative), so the board follows selection.
   useEffect(() => {
-    if (didPreload.current) return;
-    didPreload.current = true;
     let cancelled = false;
     (async () => {
       let keys = [];
+      let sig = null;
       if (explicitEpics) {
         keys = explicitEpics.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
-      } else if (!jira.hasData) {
+        sig = `epics:${keys.join(",")}`;
+      } else if (initiativeParam) {
+        sig = `init:${initiativeParam}`;
+        try {
+          keys = epicsOfInitiative(await apiClient.initiative(initiativeParam));
+        } catch { /* no server / not found → skip */ }
+      } else {
+        // No explicit target: fall back once to the last-viewed initiative, and
+        // only when the board is empty (don't clobber a manually-built board).
+        if (didFallback.current || jira.hasData) return;
+        didFallback.current = true;
         let initName = null;
         try { initName = localStorage.getItem("sdlc-current-initiative"); } catch { /* ignore */ }
-        if (initName) {
-          try {
-            const d = await apiClient.initiative(initName);
-            keys = [...new Set((d.jiras || []).map((j) => j.epic).filter((k) => k && EPIC_KEY_RE.test(k)))];
-          } catch { /* no server / not found → skip preload */ }
-        }
+        if (!initName) return;
+        sig = `init:${initName}`;
+        try {
+          keys = epicsOfInitiative(await apiClient.initiative(initName));
+        } catch { return; }
       }
-      if (cancelled || !keys.length) return;
+      if (cancelled || !keys.length || loadedSig.current === sig) return;
+      loadedSig.current = sig;
       setPreloadKeys(keys);
       if (jira.token) {
         jira.loadEpics(keys);
@@ -123,9 +142,8 @@ export default function DevPlanApp() {
       }
     })();
     return () => { cancelled = true; };
-    // Run once on mount; explicitEpics/token/hasData are read at mount time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [explicitEpics, initiativeParam]);
 
   const hasData = jira.hasData;
   const epicLabel = Object.values(jira.epics).map((e) => shortName(e)).join(" + ");

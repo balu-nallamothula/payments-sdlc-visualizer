@@ -10,6 +10,7 @@ import { ArtifactGrid } from '../components/ArtifactGrid';
 import { CountUp } from '../components/CountUp';
 import { LiveToggle } from '../components/LiveToggle';
 import { useChat } from '../context/ChatContext';
+import { useCurrentInitiative } from '../context/CurrentInitiativeContext';
 import { useSSE } from '../hooks/useSSE';
 import { IconArrowLeft, IconCalendar, IconChat, IconPlay, IconStar } from '../components/icons';
 
@@ -21,6 +22,7 @@ export function InitiativeDetailPage({ name: nameProp }) {
   const name = nameProp ?? params.name ?? '';
   const [searchParams, setSearchParams] = useSearchParams();
   const chat = useChat();
+  const { setCurrent } = useCurrentInitiative();
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
@@ -64,13 +66,9 @@ export function InitiativeDetailPage({ name: nameProp }) {
     setDetail(null);
     setError(null);
     chat.setTarget(name);
-    try {
-      localStorage.setItem('sdlc-current-initiative', name);
-    } catch {
-      /* ignore */
-    }
+    setCurrent(name); // reactive: sidebar's Dev Plan link follows the selection
     load();
-  }, [name, load]);
+  }, [name, load, setCurrent]);
 
   const { connected } = useSSE(live, load);
 
