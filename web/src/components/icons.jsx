@@ -181,3 +181,16 @@ export const IconCollapse = mk(
     <path d="M10 10 3 3M14 14l7 7" />
   </>,
 );
+export const IconTicket = mk(
+  <>
+    <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z" />
+    <path d="M14 6v12" strokeDasharray="1.5 2.5" />
+  </>,
+);
+export const IconExternal = mk(
+  <>
+    <path d="M15 3h6v6" />
+    <path d="M10 14 21 3" />
+    <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+  </>,
+);

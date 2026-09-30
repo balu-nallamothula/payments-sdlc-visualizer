@@ -611,7 +611,7 @@ hr {
 /* ---------------- Current-stage hero ---------------- */
 .hero {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   gap: 22px;
   align-items: center;
   background: var(--panel);
@@ -632,16 +632,6 @@ hr {
   color: #fff;
   box-shadow: 0 12px 26px rgba(160, 92, 220, 0.42);
 }
-.hero .focus .fi {
-  width: 42px;
-  height: 42px;
-  border-radius: 0;
-  background: var(--accent-soft);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
 .hero .label {
   color: var(--accent);
   font-size: 12px;
@@ -658,13 +648,6 @@ hr {
 .hero .sub {
   color: var(--muted);
   font-size: 13px;
-}
-.hero .focus {
-  border-left: 1px solid var(--border);
-  padding-left: 22px;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
 }
 .hero .meta {
   display: flex;
@@ -1881,4 +1864,46 @@ tbody tr:hover {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* Jira detail header — an accent-tinted banner so it clearly reads as a ticket,
+   distinct from the plain initiative header. */
+.jira-banner {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 14px 18px 16px;
+  margin-bottom: 18px;
+}
+.jira-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.jira-crumbs a {
+  color: var(--muted);
+}
+.jira-crumbs a:hover {
+  color: var(--text);
+}
+.jira-crumbs .sep {
+  color: var(--border-strong);
+}
+.jira-crumbs-key {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.jira-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
 }

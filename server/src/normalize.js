@@ -307,6 +307,7 @@ export function normalizeJira({ id, relPath, meta }) {
     id: m.jira_key || id,
     relPath,
     title: m.title || null,
+    url: m.jira_url || m.url || null,
     epic: m.epic || m.epic_id || null,
     impactLevel: m.impact_level || null,
     storyPoints: m.story_points ?? null,

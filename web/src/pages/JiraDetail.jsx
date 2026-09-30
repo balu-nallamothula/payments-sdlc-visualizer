@@ -9,7 +9,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { ArtifactGrid } from '../components/ArtifactGrid';
 import { CountUp } from '../components/CountUp';
 import { useChat } from '../context/ChatContext';
-import { IconArrowLeft, IconChat, IconPlay } from '../components/icons';
+import { IconChat, IconExternal, IconPlay, IconTicket } from '../components/icons';
 
 export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
   const params = useParams();
@@ -86,36 +86,51 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
 
   return (
     <div>
-      <Link to={initiativePath(name)} className="breadcrumb">
-        <IconArrowLeft width={15} height={15} /> {name}
-      </Link>
-
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', margin: '4px 0 20px' }}>
-        <div>
-          <h1 className="page-title">
-            <span className="mono" style={{ color: 'var(--accent)' }}>{jira.id}</span> {jira.title || ''}
-          </h1>
-          <div className="row wrap" style={{ gap: 10, fontSize: 12, marginTop: 4 }}>
-            {jira.epic && <span className="muted">epic {jira.epic}</span>}
-            {jira.storyPoints != null && <span className="muted">{jira.storyPoints} pts</span>}
-            {jira.lifecycleStatus && <span className="muted">{jira.lifecycleStatus}</span>}
-          </div>
+      <div className="jira-banner">
+        <div className="jira-crumbs">
+          <Link to="/initiatives">Initiatives</Link>
+          <span className="sep">/</span>
+          <Link to={initiativePath(name)}>{name}</Link>
+          <span className="sep">/</span>
+          <span className="jira-crumbs-key">{jira.id}</span>
         </div>
-        <div className="row wrap" style={{ gap: 8, justifyContent: 'flex-end' }}>
-          {jira.impactLevel && <span className="badge warn">{jira.impactLevel}</span>}
-          <span className="badge violet"><CountUp value={jira.percent} suffix="% complete" /></span>
-          {activeCell && (
-            <button
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginTop: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="jira-eyebrow"><IconTicket width={13} height={13} /> Jira ticket</div>
+            <h1 className="page-title" style={{ marginTop: 4 }}>
+              <span className="mono" style={{ color: 'var(--accent)' }}>{jira.id}</span> {jira.title || ''}
+            </h1>
+            <div className="row wrap" style={{ gap: 10, fontSize: 12, marginTop: 6 }}>
+              {jira.epic && <span className="muted">epic {jira.epic}</span>}
+              {jira.storyPoints != null && <span className="muted">{jira.storyPoints} pts</span>}
+              {jira.lifecycleStatus && <span className="muted">{jira.lifecycleStatus}</span>}
+            </div>
+          </div>
+          <div className="row wrap" style={{ gap: 8, justifyContent: 'flex-end' }}>
+            <a
               className="btn sm"
-              onClick={() => chat.open(jira.id, `/seph-sdlc continue ${jira.id}`)}
-              title={`Continue ${activeCell.name}`}
+              href={jira.url || `https://jira.sephora.com/browse/${jira.id}`}
+              target="_blank"
+              rel="noreferrer"
+              title="Open this ticket in Jira"
             >
-              <IconPlay width={13} height={13} className="nudge" /> Continue stage {activeCell.n}
+              <IconExternal width={14} height={14} /> Open in Jira
+            </a>
+            {jira.impactLevel && <span className="badge warn">{jira.impactLevel}</span>}
+            <span className="badge violet"><CountUp value={jira.percent} suffix="% complete" /></span>
+            {activeCell && (
+              <button
+                className="btn sm"
+                onClick={() => chat.open(jira.id, `/seph-sdlc continue ${jira.id}`)}
+                title={`Continue ${activeCell.name}`}
+              >
+                <IconPlay width={13} height={13} className="nudge" /> Continue stage {activeCell.n}
+              </button>
+            )}
+            <button className="btn sm primary" onClick={() => chat.open(jira.id)}>
+              <IconChat width={15} height={15} /> Run in chat
             </button>
-          )}
-          <button className="btn sm primary" onClick={() => chat.open(jira.id)}>
-            <IconChat width={15} height={15} /> Run in chat
-          </button>
+          </div>
         </div>
       </div>
 
