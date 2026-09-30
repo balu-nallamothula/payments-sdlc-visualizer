@@ -55,11 +55,11 @@ export const apiClient = {
   },
   gitStatus: () => get('/api/git/status'),
   gitBranches: () => get('/api/git/branches'),
-  gitCheckout: async (branch) => {
+  gitCheckout: async (branch, { force = false } = {}) => {
     const res = await fetch('/api/git/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ branch }),
+      body: JSON.stringify({ branch, force }),
     });
     if (!res.ok) {
       let msg = `${res.status} ${res.statusText}`;
@@ -69,7 +69,9 @@ export const apiClient = {
       } catch {
         /* ignore */
       }
-      throw new Error(msg);
+      const err = new Error(msg);
+      err.status = res.status; // 409 = blocked by uncommitted changes
+      throw err;
     }
     return res.json();
   },

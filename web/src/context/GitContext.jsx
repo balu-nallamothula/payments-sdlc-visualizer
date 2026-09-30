@@ -22,8 +22,8 @@ export function GitProvider({ children }) {
 
   // Switch the sephora-project-docs branch, then refresh status. Throws on
   // failure (e.g. uncommitted changes) so the caller can surface the reason.
-  const checkout = useCallback(async (branch) => {
-    const result = await apiClient.gitCheckout(branch);
+  const checkout = useCallback(async (branch, opts) => {
+    const result = await apiClient.gitCheckout(branch, opts);
     refresh();
     return result;
   }, [refresh]);

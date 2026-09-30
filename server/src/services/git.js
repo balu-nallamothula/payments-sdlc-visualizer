@@ -39,9 +39,11 @@ export async function gitBranches() {
   return { current: curRes.stdout.trim() || null, branches };
 }
 
-/** Switch to an existing local branch. Never forces — a checkout that would
- *  discard uncommitted changes fails, and the caller surfaces the reason. */
-export async function gitCheckout(branch) {
+/** Switch to an existing local branch. Without `force`, a checkout that would
+ *  discard uncommitted changes fails (409) and the caller surfaces the reason.
+ *  With `force` (git checkout -f), local changes to tracked files are discarded
+ *  — irreversible; the caller must have confirmed. */
+export async function gitCheckout(branch, { force = false } = {}) {
   if (!branch || typeof branch !== 'string') {
     const e = new Error('branch required');
     e.code = 'BAD_REQUEST';
@@ -55,9 +57,10 @@ export async function gitCheckout(branch) {
     e.code = 'BAD_REQUEST';
     throw e;
   }
+  const args = force ? ['-C', DIR, 'checkout', '-f', branch] : ['-C', DIR, 'checkout', branch];
   try {
-    const { stdout } = await exec('git', ['-C', DIR, 'checkout', branch]);
-    return { ok: true, branch, output: stdout.trim() };
+    const { stdout } = await exec('git', args);
+    return { ok: true, branch, forced: force, output: stdout.trim() };
   } catch (err) {
     const e = new Error(
       (err.stderr || err.message || '').trim() ||

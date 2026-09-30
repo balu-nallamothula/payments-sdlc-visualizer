@@ -50,6 +50,14 @@ export function ConfirmProvider({ children }) {
           <div className="confirm-card card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
             <h3 id="confirm-title" className="confirm-title">{state.title}</h3>
             {state.message && <p className="confirm-message">{state.message}</p>}
+            {Array.isArray(state.details) && state.details.length > 0 && (
+              <ul className="confirm-details">
+                {state.details.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            )}
+            {state.warning && <p className="confirm-warning">{state.warning}</p>}
             <div className="confirm-actions">
               {!state.alert && (
                 <button type="button" className="btn" onClick={() => settle(false)}>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useGit } from '../context/GitContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -7,12 +6,11 @@ import { IconGit } from './icons';
 
 // Shows the current sephora-project-docs branch and switches to another local
 // branch. Switching is repo-wide (it changes the data across the whole app), so
-// it confirms first and, on success, returns to the initiatives list — the
-// current initiative may not exist on the other branch.
+// it confirms first; on success GitContext updates the branch and views that key
+// off it (the initiatives list) refetch.
 export function BranchSwitcher() {
-  const { branch, checkout } = useGit();
+  const { branch, checkout, files } = useGit();
   const confirm = useConfirm();
-  const navigate = useNavigate();
   const [branches, setBranches] = useState([]);
   const [busy, setBusy] = useState(false);
 
@@ -22,26 +20,56 @@ export function BranchSwitcher() {
     return () => { live = false; };
   }, [branch]);
 
+  // When a switch is blocked by uncommitted changes, offer to discard them.
+  // Shows exactly what would be lost and warns it's irreversible.
+  async function offerDiscard(target) {
+    const tracked = (files || []).filter((f) => f.status !== '??');
+    const discard = await confirm({
+      title: 'Discard local changes and switch?',
+      message:
+        `Switching to "${target}" is blocked by uncommitted changes in sephora-project-docs. ` +
+        `You can discard them and switch anyway${tracked.length ? ` — ${tracked.length} file(s) will be reverted:` : '.'}`,
+      details: tracked.map((f) => `${f.status || 'M'}  ${f.path}`),
+      warning: 'This permanently discards these changes. It cannot be undone.',
+      confirmLabel: 'Discard & switch',
+      cancelLabel: 'Keep changes',
+      danger: true,
+    });
+    if (!discard) return;
+    setBusy(true);
+    try {
+      await checkout(target, { force: true });
+    } catch (err) {
+      await confirm({ title: "Couldn't switch branch", message: err.message, confirmLabel: 'OK', alert: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onChange(e) {
     const target = e.target.value;
     if (!target || target === branch) return;
     const ok = await confirm({
       title: `Switch to ${target}?`,
       message:
-        `This checks out "${target}" in sephora-project-docs and changes the data shown ` +
-        `across the app. Uncommitted changes will block the switch.`,
+        `This checks out "${target}" in sephora-project-docs and reloads the initiatives ` +
+        `for that branch. Uncommitted changes will block the switch.`,
       confirmLabel: 'Switch',
     });
     if (!ok) return;
     setBusy(true);
     try {
       await checkout(target);
-      navigate('/initiatives');
     } catch (err) {
-      await confirm({ title: "Couldn't switch branch", message: err.message, confirmLabel: 'OK', alert: true });
-    } finally {
       setBusy(false);
+      if (err.status === 409) {
+        await offerDiscard(target); // blocked by uncommitted changes → offer discard
+      } else {
+        await confirm({ title: "Couldn't switch branch", message: err.message, confirmLabel: 'OK', alert: true });
+      }
+      return;
     }
+    setBusy(false);
   }
 
   if (!branch) return null;

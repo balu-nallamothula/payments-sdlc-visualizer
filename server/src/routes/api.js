@@ -103,8 +103,8 @@ api.get('/git/branches', async (req, res, next) => {
 
 api.post('/git/checkout', async (req, res, next) => {
   try {
-    const { branch } = req.body || {};
-    res.json(await gitCheckout(branch));
+    const { branch, force } = req.body || {};
+    res.json(await gitCheckout(branch, { force: !!force }));
   } catch (err) {
     const map = { BAD_REQUEST: 400, CONFLICT: 409 };
     if (err.code && map[err.code]) return res.status(map[err.code]).json({ error: err.message });
