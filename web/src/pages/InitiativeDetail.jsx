@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { StageNodes } from '../components/StageNodes';
 import { CurrentStageHero } from '../components/CurrentStageHero';
@@ -13,16 +13,37 @@ import { useChat } from '../context/ChatContext';
 import { useSSE } from '../hooks/useSSE';
 import { IconArrowLeft, IconChat, IconPlay, IconStar } from '../components/icons';
 
-export function InitiativeDetailPage() {
-  const { name = '' } = useParams();
+export function InitiativeDetailPage({ name: nameProp }) {
+  const params = useParams();
+  const name = nameProp ?? params.name ?? '';
+  const [searchParams, setSearchParams] = useSearchParams();
   const chat = useChat();
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
-  const [selectedStage, setSelectedStage] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
   const [openArtifact, setOpenArtifact] = useState(null);
   const [live, setLive] = useState(false);
   const [stageJiraArtifacts, setStageJiraArtifacts] = useState([]);
+
+  // The selected pipeline stage lives in the URL (?stage=N) so it's shareable and
+  // survives a reload; it's derived from the loaded pipeline rather than stored.
+  const stageParam = searchParams.get('stage');
+  const selectedStage = useMemo(() => {
+    if (!detail || !stageParam) return null;
+    const n = Number(stageParam);
+    return detail.pipeline.cells.find((c) => c.n === n) || null;
+  }, [detail, stageParam]);
+  const selectStage = useCallback(
+    (cell) => {
+      setSearchParams((prev) => {
+        const p = new URLSearchParams(prev);
+        if (cell) p.set('stage', String(cell.n));
+        else p.delete('stage');
+        return p;
+      });
+    },
+    [setSearchParams],
+  );
 
   const load = useCallback(() => {
     apiClient.initiative(name).then(setDetail).catch((e) => setError(e.message));
@@ -176,7 +197,7 @@ export function InitiativeDetailPage() {
             ? `Pipeline · Stage ${String(selectedStage.n).padStart(2, '0')} — ${selectedStage.name}`
             : 'Pipeline'}
         </h2>
-        <StageNodes cells={pipeline.cells} onSelect={setSelectedStage} selectedN={selectedStage?.n} />
+        <StageNodes cells={pipeline.cells} onSelect={selectStage} selectedN={selectedStage?.n} />
         <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>
           Stages 1–4 reflect this initiative; stages 5–12 aggregate across its Jiras. Click a stage to see its results.
         </div>
@@ -190,7 +211,7 @@ export function InitiativeDetailPage() {
           artifacts={artifacts}
           perJiraHint={selectedStage.n >= 5}
           onOpenArtifact={setOpenArtifact}
-          onClear={() => setSelectedStage(null)}
+          onClear={() => selectStage(null)}
           onStart={selectedStage.n <= 4 ? startStage : undefined}
           jiraList={perJiraList}
           onJiraStart={startJiraStage}

@@ -4,6 +4,7 @@ import { apiClient } from '../api/client';
 import { ArtifactGrid } from '../components/ArtifactGrid';
 import { ArtifactViewer } from '../components/ArtifactViewer';
 import { IconArrowRight } from '../components/icons';
+import { initiativePath } from '../lib/paths';
 
 export function ArtifactsPage() {
   const [initiatives, setInitiatives] = useState(null);
@@ -78,7 +79,7 @@ export function ArtifactsPage() {
       {selectedInit && (
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
           <span className="page-sub">{selectedInit.relPath}</span>
-          <Link to={`/initiatives/${encodeURIComponent(selected)}`} className="btn sm ghost">
+          <Link to={initiativePath(selected)} className="btn sm ghost">
             Open initiative <IconArrowRight width={14} height={14} />
           </Link>
         </div>

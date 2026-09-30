@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
+import { initiativePath } from '../lib/paths';
 import { StageNodes } from '../components/StageNodes';
 import { CurrentStageHero } from '../components/CurrentStageHero';
 import { StageResults } from '../components/StageResults';
@@ -10,14 +11,35 @@ import { CountUp } from '../components/CountUp';
 import { useChat } from '../context/ChatContext';
 import { IconArrowLeft, IconChat, IconPlay } from '../components/icons';
 
-export function JiraDetailPage() {
-  const { name = '', jiraId = '' } = useParams();
+export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
+  const params = useParams();
+  const name = nameProp ?? params.name ?? '';
+  const jiraId = jiraIdProp ?? params.jiraId ?? '';
+  const [searchParams, setSearchParams] = useSearchParams();
   const chat = useChat();
   const [jira, setJira] = useState(null);
   const [error, setError] = useState(null);
-  const [selectedStage, setSelectedStage] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
   const [openArtifact, setOpenArtifact] = useState(null);
+
+  // Selected stage lives in the URL (?stage=N) so it's shareable and reload-safe.
+  const stageParam = searchParams.get('stage');
+  const selectedStage = useMemo(() => {
+    if (!jira || !stageParam) return null;
+    const n = Number(stageParam);
+    return jira.stages.find((c) => c.n === n) || null;
+  }, [jira, stageParam]);
+  const selectStage = useCallback(
+    (cell) => {
+      setSearchParams((prev) => {
+        const p = new URLSearchParams(prev);
+        if (cell) p.set('stage', String(cell.n));
+        else p.delete('stage');
+        return p;
+      });
+    },
+    [setSearchParams],
+  );
 
   const load = useCallback(() => {
     apiClient.jira(name, jiraId).then((r) => setJira(r.jira)).catch((e) => setError(e.message));
@@ -64,7 +86,7 @@ export function JiraDetailPage() {
 
   return (
     <div>
-      <Link to={`/initiatives/${encodeURIComponent(name)}`} className="breadcrumb">
+      <Link to={initiativePath(name)} className="breadcrumb">
         <IconArrowLeft width={15} height={15} /> {name}
       </Link>
 
@@ -125,7 +147,7 @@ export function JiraDetailPage() {
             ? `Pipeline · Stage ${String(selectedStage.n).padStart(2, '0')} — ${selectedStage.name}`
             : 'Per-Jira Pipeline (stages 5–12)'}
         </h2>
-        <StageNodes cells={jira.stages} onSelect={setSelectedStage} selectedN={selectedStage?.n} />
+        <StageNodes cells={jira.stages} onSelect={selectStage} selectedN={selectedStage?.n} />
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 18 }}>
@@ -173,7 +195,7 @@ export function JiraDetailPage() {
           cell={selectedStage}
           artifacts={artifacts}
           onOpenArtifact={setOpenArtifact}
-          onClear={() => setSelectedStage(null)}
+          onClear={() => selectStage(null)}
           onStart={startStage}
         />
       ) : (

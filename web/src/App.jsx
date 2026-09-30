@@ -10,8 +10,7 @@ import { ChatRail } from './components/ChatRail';
 import { IconChat } from './components/icons';
 import { DashboardPage } from './pages/Dashboard';
 import { InitiativesPage } from './pages/Initiatives';
-import { InitiativeDetailPage } from './pages/InitiativeDetail';
-import { JiraDetailPage } from './pages/JiraDetail';
+import { InitiativeRoute } from './pages/InitiativeRoute';
 import { StagesPage } from './pages/Stages';
 import { IntegrationsPage } from './pages/Integrations';
 import { ArtifactsPage } from './pages/Artifacts';
@@ -53,8 +52,7 @@ function Shell() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/initiatives" element={<InitiativesPage />} />
-            <Route path="/initiatives/:name" element={<InitiativeDetailPage />} />
-            <Route path="/initiatives/:name/jiras/:jiraId" element={<JiraDetailPage />} />
+            <Route path="/initiatives/*" element={<InitiativeRoute />} />
             <Route path="/stages" element={<StagesPage />} />
             <Route path="/artifacts" element={<ArtifactsPage />} />
             <Route path="/dev-plan" element={<DevPlanPage />} />
