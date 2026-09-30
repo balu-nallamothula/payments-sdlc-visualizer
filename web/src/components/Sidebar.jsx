@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
+  IconCalendar,
   IconChevronLeft,
   IconDashboard,
   IconDoc,
@@ -24,6 +25,7 @@ const SECTIONS = [
     title: 'Resources',
     items: [
       { to: '/artifacts', label: 'Artifacts', icon: IconDoc },
+      { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar },
       { to: '/integrations', label: 'Integrations', icon: IconPlug },
     ],
   },

@@ -15,6 +15,7 @@ async function get(url) {
 
 export const apiClient = {
   health: () => get('/api/health'),
+  devplanConfig: () => get('/api/devplan/config'),
   initiatives: () => get('/api/initiatives'),
   initiative: (id, raw = false) =>
     get(`/api/initiatives/${encodeURIComponent(id)}${raw ? '?raw=1' : ''}`),

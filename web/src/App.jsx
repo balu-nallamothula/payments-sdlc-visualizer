@@ -15,6 +15,7 @@ import { JiraDetailPage } from './pages/JiraDetail';
 import { StagesPage } from './pages/Stages';
 import { IntegrationsPage } from './pages/Integrations';
 import { ArtifactsPage } from './pages/Artifacts';
+import { DevPlanPage } from './pages/DevPlan';
 
 function ChatDock() {
   const chat = useChat();
@@ -56,6 +57,7 @@ function Shell() {
             <Route path="/initiatives/:name/jiras/:jiraId" element={<JiraDetailPage />} />
             <Route path="/stages" element={<StagesPage />} />
             <Route path="/artifacts" element={<ArtifactsPage />} />
+            <Route path="/dev-plan" element={<DevPlanPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
           </Routes>
         </div>
