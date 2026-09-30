@@ -221,19 +221,32 @@ export function InitiativeDetailPage({ name: nameProp }) {
       </div>
 
       {selectedStage ? (
-        <StageResults
-          key={selectedStage.n}
-          n={selectedStage.n}
-          cell={selectedStage}
-          artifacts={artifacts}
-          perJiraHint={selectedStage.n >= 5}
-          onOpenArtifact={setOpenArtifact}
-          onClear={() => selectStage(null)}
-          onStart={selectedStage.n <= 4 ? startStage : undefined}
-          jiraList={perJiraList}
-          onJiraStart={startJiraStage}
-          jiraArtifacts={stageJiraArtifacts}
-        />
+        <>
+          <StageResults
+            key={selectedStage.n}
+            n={selectedStage.n}
+            cell={selectedStage}
+            artifacts={artifacts}
+            perJiraHint={selectedStage.n >= 5}
+            onOpenArtifact={setOpenArtifact}
+            onClear={() => selectStage(null)}
+            onStart={selectedStage.n <= 4 ? startStage : undefined}
+            jiraList={perJiraList}
+            onJiraStart={startJiraStage}
+            jiraArtifacts={stageJiraArtifacts}
+            initiativeId={name}
+          />
+          {/* Jira Management (stage 4) produces the Jiras — show them alongside its
+              results. Stages 5–12 already list their Jiras inside StageResults. */}
+          {selectedStage.n === 4 && jiras.length > 0 && (
+            <div className="card" style={{ marginBottom: 18 }}>
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+                <h2 style={{ margin: 0 }}>Jiras ({jiras.length})</h2>
+              </div>
+              <JiraBoard initiativeId={name} jiras={jiras} />
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div className="card" style={{ marginBottom: 18 }}>
