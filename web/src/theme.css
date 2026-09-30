@@ -2006,18 +2006,27 @@ tbody tr:hover {
   align-items: start;
   margin-top: 12px;
 }
-.jira-key {
-  font-size: 20px;
-  font-weight: 700;
+.jira-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--accent);
-  letter-spacing: -0.01em;
+  font-size: 13px;
+  font-weight: 700;
 }
 .jira-title {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 800;
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   letter-spacing: -0.02em;
   line-height: 1.2;
+}
+.jira-status-note {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 620px;
 }
 .jira-meta {
   display: grid;
@@ -2065,22 +2074,14 @@ tbody tr:hover {
   padding-left: 20px;
 }
 .jira-progress-count {
-  font-size: 20px;
+  font-size: 15px;
   margin-top: 4px;
 }
 .jira-progress-count strong {
   font-weight: 800;
 }
-.jira-progress-bar {
-  height: 8px;
-  background: var(--panel-3);
+.jira-progress-strip {
   margin-top: 10px;
-  overflow: hidden;
-}
-.jira-progress-bar span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #3aa0ff, #7c5cf0);
 }
 .jira-progress-pct {
   font-size: 12px;

@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { initiativePath } from '../lib/paths';
 import { StageNodes } from '../components/StageNodes';
+import { PipelineStrip } from '../components/PipelineStrip';
 import { StageResults } from '../components/StageResults';
 import { StageBadge } from '../components/StageBadge';
 import { ArtifactViewer } from '../components/ArtifactViewer';
@@ -172,14 +173,16 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
 
         <div className="jira-head">
           <div className="jira-head-main">
-            <div className="jira-eyebrow"><IconTicket width={13} height={13} /> Jira ticket</div>
-            <div className="jira-key mono">{jira.id}</div>
+            <div className="jira-kicker"><IconTicket width={13} height={13} /> <span className="mono">{jira.id}</span></div>
             <h1 className="jira-title">{jira.title || ''}</h1>
             <div className="row wrap" style={{ gap: 8, marginTop: 8 }}>
               <span className={`badge ${statusChip}`}>{shortStatus}</span>
               {jira.storyPoints != null && <span className="badge">{jira.storyPoints} pts</span>}
               {jira.impactLevel && <span className="badge warn">{jira.impactLevel} impact</span>}
             </div>
+            {jira.lifecycleStatus && jira.lifecycleStatus !== shortStatus && (
+              <div className="jira-status-note">{jira.lifecycleStatus}</div>
+            )}
             <div className="jira-meta">
               <div>
                 <span className="k">Assignee</span>
@@ -195,7 +198,7 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
           <div className="jira-head-side">
             <div className="k">Delivery progress</div>
             <div className="jira-progress-count"><strong>{doneCount}</strong> / {totalStages} stages complete</div>
-            <div className="jira-progress-bar"><span style={{ width: `${pct}%` }} /></div>
+            <div className="jira-progress-strip"><PipelineStrip cells={stages} /></div>
             <div className="jira-progress-pct">{pct}%</div>
             {current && (
               <div className="jira-current">
@@ -244,22 +247,7 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
         <StageNodes cells={stages} onSelect={selectStage} selectedN={selectedStage?.n} />
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 18 }}>
-        <div className="card">
-          <h2>Details</h2>
-          <div className="kv">
-            <div className="k">Status</div><div className="v">{jira.status || shortStatus}</div>
-            <div className="k">Story points</div><div className="v">{jira.storyPoints ?? '—'}</div>
-            <div className="k">Impact</div><div className="v">{jira.impactLevel ? <span className="badge warn">{jira.impactLevel}</span> : '—'}</div>
-            <div className="k">Assignee</div><div className="v">{displayName(jira.owner)}</div>
-            <div className="k">Epic</div><div className="v">{epicCell}</div>
-            <div className="k">Labels</div><div className="v">{labelsCell}</div>
-            <div className="k">Started</div><div className="v">{fmtDate(started) || '—'}</div>
-            <div className="k">Last updated</div><div className="v">{fmtDate(lastUpdated) || '—'}</div>
-          </div>
-        </div>
-
-        <div className="card">
+      <div className="card" style={{ marginBottom: 18 }}>
           <h2>Development</h2>
           {jira.targetRepositories.length === 0 && jira.prUrl.length === 0 && !jira.branchName ? (
             <div className="muted">No development activity recorded yet.</div>
@@ -314,7 +302,6 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
               {jira.blocks.length > 0 && (<><div className="k">Blocks</div><div className="v">{jira.blocks.join(', ')}</div></>)}
             </div>
           )}
-        </div>
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
