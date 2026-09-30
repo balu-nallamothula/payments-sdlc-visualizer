@@ -4,15 +4,30 @@ import { useGit } from '../context/GitContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { IconGit, IconCheck } from './icons';
 
-// Shows the current sephora-project-docs branch and switches to another local
-// branch via a filterable combobox (type to filter). Switching is repo-wide (it
-// changes the data across the whole app), so it confirms first; on success
-// GitContext updates the branch and views that key off it (the initiatives list)
-// refetch. A switch blocked by uncommitted changes offers to discard them.
+// Human label for a git porcelain status code (M, A, D, R, ??, …).
+function describeStatus(code) {
+  const c = (code || '').replace(/\s/g, '');
+  if (c === '??') return 'Untracked';
+  const map = { M: 'Modified', A: 'Added', D: 'Deleted', R: 'Renamed', C: 'Copied', U: 'Conflicted', T: 'Type changed' };
+  return map[c[0]] || (c || 'Changed');
+}
+
+// "origin/feature/x" -> "feature/x" (the local branch name it maps to).
+const localNameOf = (ref) => ref.slice(ref.indexOf('/') + 1);
+
+// Repos can have thousands of remote branches — cap the rendered list and let the
+// filter narrow it, so opening the dropdown never renders a huge DOM.
+const MAX_SHOWN = 50;
+
+// Shows the current sephora-project-docs branch and switches to another branch
+// via a filterable combobox (type to filter). Lists local branches plus remote
+// branches that have no local counterpart (grouped). Switching is repo-wide, so
+// it confirms first; a switch blocked by uncommitted changes offers to discard.
 export function BranchSwitcher() {
   const { branch, checkout, files } = useGit();
   const confirm = useConfirm();
   const [branches, setBranches] = useState([]);
+  const [remotes, setRemotes] = useState([]);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -22,11 +37,14 @@ export function BranchSwitcher() {
 
   useEffect(() => {
     let live = true;
-    apiClient.gitBranches().then((r) => { if (live) setBranches(r.branches || []); }).catch(() => {});
+    apiClient.gitBranches().then((r) => {
+      if (!live) return;
+      setBranches(r.branches || []);
+      setRemotes(r.remotes || []);
+    }).catch(() => {});
     return () => { live = false; };
   }, [branch]);
 
-  // Close on outside click / Escape; focus the filter input when opening.
   useEffect(() => {
     if (!open) return undefined;
     setQuery('');
@@ -43,20 +61,28 @@ export function BranchSwitcher() {
     };
   }, [open]);
 
-  const filtered = useMemo(() => {
+  // Local branches, then remote branches with no local counterpart, filtered.
+  const options = useMemo(() => {
+    const locals = branches.map((b) => ({ value: b, label: b, remote: false }));
+    const remoteOnly = remotes
+      .filter((r) => !branches.includes(localNameOf(r)))
+      .map((r) => ({ value: r, label: r, remote: true }));
+    const all = [...locals, ...remoteOnly];
     const q = query.trim().toLowerCase();
-    return q ? branches.filter((b) => b.toLowerCase().includes(q)) : branches;
-  }, [branches, query]);
+    return q ? all.filter((o) => o.label.toLowerCase().includes(q)) : all;
+  }, [branches, remotes, query]);
 
-  // When a switch is blocked by uncommitted changes, offer to discard them.
-  async function offerDiscard(target) {
+  const shown = useMemo(() => options.slice(0, MAX_SHOWN), [options]);
+  const overflow = options.length - shown.length;
+
+  async function offerDiscard(opt) {
     const tracked = (files || []).filter((f) => f.status !== '??');
     const discard = await confirm({
       title: 'Discard local changes and switch?',
       message:
-        `Switching to "${target}" is blocked by uncommitted changes in sephora-project-docs. ` +
+        `Switching to "${opt.value}" is blocked by uncommitted changes in sephora-project-docs. ` +
         `You can discard them and switch anyway${tracked.length ? ` — ${tracked.length} file(s) will be reverted:` : '.'}`,
-      details: tracked.map((f) => `${f.status || 'M'}  ${f.path}`),
+      details: tracked.map((f) => `${describeStatus(f.status)} · ${f.path}`),
       warning: 'This permanently discards these changes. It cannot be undone.',
       confirmLabel: 'Discard & switch',
       cancelLabel: 'Keep changes',
@@ -65,7 +91,7 @@ export function BranchSwitcher() {
     if (!discard) return;
     setBusy(true);
     try {
-      await checkout(target, { force: true });
+      await checkout(opt.value, { force: true });
     } catch (err) {
       await confirm({ title: "Couldn't switch branch", message: err.message, confirmLabel: 'OK', alert: true });
     } finally {
@@ -73,24 +99,26 @@ export function BranchSwitcher() {
     }
   }
 
-  async function switchTo(target) {
+  async function switchTo(opt) {
     setOpen(false);
-    if (!target || target === branch) return;
+    if (!opt || opt.value === branch) return;
     const ok = await confirm({
-      title: `Switch to ${target}?`,
-      message:
-        `This checks out "${target}" in sephora-project-docs and reloads the initiatives ` +
-        `for that branch. Uncommitted changes will block the switch.`,
+      title: `Switch to ${opt.value}?`,
+      message: opt.remote
+        ? `This creates a local branch tracking "${opt.value}", switches to it, and reloads the ` +
+          `initiatives for that branch. Uncommitted changes will block the switch.`
+        : `This checks out "${opt.value}" in sephora-project-docs and reloads the initiatives for ` +
+          `that branch. Uncommitted changes will block the switch.`,
       confirmLabel: 'Switch',
     });
     if (!ok) return;
     setBusy(true);
     try {
-      await checkout(target);
+      await checkout(opt.value);
       setBusy(false);
     } catch (err) {
       setBusy(false);
-      if (err.status === 409) await offerDiscard(target);
+      if (err.status === 409) await offerDiscard(opt);
       else await confirm({ title: "Couldn't switch branch", message: err.message, confirmLabel: 'OK', alert: true });
     }
   }
@@ -98,14 +126,13 @@ export function BranchSwitcher() {
   function onInputKeyDown(e) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActive((i) => Math.min(i + 1, filtered.length - 1));
+      setActive((i) => Math.min(i + 1, shown.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const t = filtered[active];
-      if (t) switchTo(t);
+      if (shown[active]) switchTo(shown[active]);
     }
   }
 
@@ -136,24 +163,31 @@ export function BranchSwitcher() {
             onKeyDown={onInputKeyDown}
           />
           <ul className="branch-combo-list">
-            {filtered.length === 0 ? (
+            {shown.length === 0 ? (
               <li className="branch-combo-empty">No branches match</li>
             ) : (
-              filtered.map((b, i) => (
-                <li key={b}>
-                  <button
-                    type="button"
-                    className={`branch-combo-opt${b === branch ? ' is-current' : ''}${i === active ? ' is-active' : ''}`}
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => switchTo(b)}
-                    role="option"
-                    aria-selected={b === branch}
-                  >
-                    <span className="branch-combo-tick">{b === branch && <IconCheck width={12} height={12} />}</span>
-                    <span className="branch-combo-name">{b}</span>
-                  </button>
-                </li>
-              ))
+              shown.map((o, i) => {
+                const firstRemote = o.remote && (i === 0 || !shown[i - 1].remote);
+                return (
+                  <li key={o.value}>
+                    {firstRemote && <div className="branch-combo-group">Remote</div>}
+                    <button
+                      type="button"
+                      className={`branch-combo-opt${o.value === branch ? ' is-current' : ''}${i === active ? ' is-active' : ''}`}
+                      onMouseEnter={() => setActive(i)}
+                      onClick={() => switchTo(o)}
+                      role="option"
+                      aria-selected={o.value === branch}
+                    >
+                      <span className="branch-combo-tick">{o.value === branch && <IconCheck width={12} height={12} />}</span>
+                      <span className="branch-combo-name">{o.label}</span>
+                    </button>
+                  </li>
+                );
+              })
+            )}
+            {overflow > 0 && (
+              <li className="branch-combo-empty">+{overflow} more — type to filter</li>
             )}
           </ul>
         </div>

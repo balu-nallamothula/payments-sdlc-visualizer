@@ -1750,9 +1750,9 @@ tbody tr:hover {
   line-height: 1.7;
 }
 .confirm-details li {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
+  padding: 1px 0;
 }
 .confirm-warning {
   margin: 0 0 20px;
@@ -1871,4 +1871,14 @@ tbody tr:hover {
   padding: 8px 10px;
   color: var(--muted);
   font-size: 12px;
+}
+.branch-combo-group {
+  padding: 6px 8px 2px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
