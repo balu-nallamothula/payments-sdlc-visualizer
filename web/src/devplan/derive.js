@@ -299,12 +299,19 @@ const sumLoad = (byLane) => Object.values(byLane || {}).reduce((a, b) => a + b, 
 export function buildSprintStrip(allIssues, overrides, load, compBySprint) {
   const nums = new Set(DEFAULT_SPRINTS);
   let hasBacklog = false;
+  let firstSprint = null; // earliest sprint this board's tickets sit in
   allIssues.forEach((i) => {
     const n = effSprint(i, overrides);
-    if (n == null) hasBacklog = true;
-    else nums.add(n);
+    if (n == null) { hasBacklog = true; return; }
+    nums.add(n);
+    if (firstSprint == null || n < firstSprint) firstSprint = n;
   });
-  const cols = [...nums].sort((a, b) => a - b).map((n) => ({
+  // Only show sprints from the project's first active sprint onwards — drop
+  // configured sprints that predate any of this board's tickets. If nothing is
+  // scheduled yet (all Backlog / no data), keep the full configured range.
+  let list = [...nums].sort((a, b) => a - b);
+  if (firstSprint != null) list = list.filter((n) => n >= firstSprint);
+  const cols = list.map((n) => ({
     key: String(n), num: n, label: sprintLabel(n), dates: SPRINT_DATES[n] || "",
     total: sumLoad(load[String(n)]), comp: compBySprint[String(n)] || null,
   }));
