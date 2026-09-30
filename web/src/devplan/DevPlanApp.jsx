@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import "./board.css";
 import { apiClient } from "../api/client.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
@@ -26,11 +26,12 @@ import Toast from "./components/Toast.jsx";
 
 const SYSTEM_NAMES = SYSTEMS.map((s) => s.name);
 
+// `slug` is the URL segment under /dev-plan (board is the index, no segment).
 const PAGES = [
-  { id: "board", label: "Board" },
-  { id: "history", label: "History" },
-  { id: "teams", label: "Team" },
-  { id: "settings", label: "Settings" },
+  { id: "board", slug: "", label: "Board" },
+  { id: "history", slug: "history", label: "History" },
+  { id: "teams", slug: "team", label: "Team" },
+  { id: "settings", slug: "settings", label: "Settings" },
 ];
 
 // Map the Jira connection colour onto a host badge variant.
@@ -53,8 +54,22 @@ export default function DevPlanApp() {
   const [setupOpen, setSetupOpen] = useState(true);
   const [changesOpen, setChangesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(true);
-  const [activePage, setActivePage] = useState("board");
   const [kpisOpen, setKpisOpen] = useLocalStorage("devplan:kpisOpen", true);
+
+  // Sub-page lives in the URL (/dev-plan, /dev-plan/history, /dev-plan/team,
+  // /dev-plan/settings) so it's deep-linkable and reload-safe. Derived from the
+  // splat; the board stays mounted across tabs so its state persists.
+  const navigate = useNavigate();
+  const location = useLocation();
+  const sub = (useParams()["*"] || "").split("/")[0];
+  const activePage = PAGES.find((p) => p.slug === sub)?.id || "board";
+  const setActivePage = useCallback(
+    (id) => {
+      const slug = PAGES.find((p) => p.id === id)?.slug ?? "";
+      navigate({ pathname: `/dev-plan${slug ? `/${slug}` : ""}`, search: location.search });
+    },
+    [navigate, location.search],
+  );
 
   // Preload: which epics to show on open, resolved from the URL. `?epics=` is a
   // direct list; `?initiative=<name>` (from the sidebar / "Open in Dev Plan") is

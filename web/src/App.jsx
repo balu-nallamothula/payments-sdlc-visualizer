@@ -56,7 +56,7 @@ function Shell() {
             <Route path="/initiatives/*" element={<InitiativeRoute />} />
             <Route path="/stages" element={<StagesPage />} />
             <Route path="/artifacts" element={<ArtifactsPage />} />
-            <Route path="/dev-plan" element={<DevPlanPage />} />
+            <Route path="/dev-plan/*" element={<DevPlanPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
           </Routes>
         </div>
