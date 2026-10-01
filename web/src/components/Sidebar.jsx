@@ -6,6 +6,7 @@ import {
   IconDoc,
   IconLayers,
   IconPlug,
+  IconSettings,
   IconStages,
 } from './icons';
 
@@ -24,6 +25,10 @@ const SECTIONS = [
       { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar, devPlan: true },
       { to: '/integrations', label: 'Integrations', icon: IconPlug },
     ],
+  },
+  {
+    title: 'System',
+    items: [{ to: '/settings', label: 'Settings', icon: IconSettings }],
   },
 ];
 

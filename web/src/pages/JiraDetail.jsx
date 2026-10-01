@@ -108,7 +108,7 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
     setLive(null);
     let token = null;
     try { token = localStorage.getItem('jira:pat'); } catch { /* ignore */ }
-    if (!token || !jiraId) return undefined;
+    if (!token || !token.trim() || !jiraId) return undefined;
     let cancelled = false;
     jiraFetch(token, `issue?key=${encodeURIComponent(jiraId)}`)
       .then((d) => { if (!cancelled) setLive(d); })
