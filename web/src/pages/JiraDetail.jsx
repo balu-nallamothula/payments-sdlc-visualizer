@@ -288,8 +288,6 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
                 </>
               )}
               {jira.epic && (<><div className="k">Jira in Epic</div><div className="v">{epicCell}</div></>)}
-              <div className="k">Related initiative</div>
-              <div className="v"><Link to={initiativePath(name)}>{name}</Link></div>
               {jira.blockedBy.length > 0 && (<><div className="k">Blocked by</div><div className="v">{jira.blockedBy.join(', ')}</div></>)}
               {jira.blocks.length > 0 && (<><div className="k">Blocks</div><div className="v">{jira.blocks.join(', ')}</div></>)}
             </div>
