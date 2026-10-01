@@ -59,15 +59,24 @@ export async function jiraMyself(token) {
 }
 
 export async function jiraIssue(token, key) {
-  const data = await jiraGet(
-    `/rest/api/2/issue/${encodeURIComponent(key)}?fields=summary,status,issuetype`,
-    token,
-  );
+  const fields = ['summary', 'status', 'issuetype', 'priority', 'resolution', 'labels', 'fixVersions', 'assignee', SP_FIELD].join(',');
+  const data = await jiraGet(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=${fields}`, token);
+  const f = data.fields || {};
+  const a = f.assignee || null;
   return {
     key: data.key,
-    summary: (data.fields && data.fields.summary) || '',
-    status: data.fields && data.fields.status ? data.fields.status.name : '',
-    issueType: data.fields && data.fields.issuetype ? data.fields.issuetype.name : '',
+    summary: f.summary || '',
+    status: f.status ? f.status.name : '',
+    statusCategory: f.status && f.status.statusCategory ? f.status.statusCategory.key : '',
+    issueType: f.issuetype ? f.issuetype.name : '',
+    priority: f.priority ? f.priority.name : '',
+    resolution: f.resolution ? f.resolution.name : '',
+    labels: f.labels || [],
+    fixVersions: (f.fixVersions || []).map((v) => v.name),
+    assignee: a
+      ? { name: a.name || '', displayName: a.displayName || '', email: a.emailAddress || '' }
+      : null,
+    storyPoints: f[SP_FIELD] == null ? null : Number(f[SP_FIELD]),
   };
 }
 

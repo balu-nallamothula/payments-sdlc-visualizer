@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
+import { jiraFetch } from '../devplan/jira.js';
 import { initiativePath } from '../lib/paths';
 import { PipelineStrip } from '../components/PipelineStrip';
 import { StageResults } from '../components/StageResults';
@@ -66,6 +67,9 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
   const [error, setError] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
   const [openArtifact, setOpenArtifact] = useState(null);
+  // Live Jira fields (status/priority/labels/…) overlaid on the docs data when a
+  // PAT is connected — the docs reflect the SDLC pipeline, which lags the ticket.
+  const [live, setLive] = useState(null);
 
   // Selected stage lives in the URL (?stage=N) so it's shareable and reload-safe.
   const stageParam = searchParams.get('stage');
@@ -97,6 +101,20 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
     chat.setTarget(jiraId);
     load();
   }, [name, jiraId, load]);
+
+  // Pull the live ticket from Jira (via the proxy) when a PAT is present, so the
+  // header reflects the real status/priority/labels rather than the docs snapshot.
+  useEffect(() => {
+    setLive(null);
+    let token = null;
+    try { token = localStorage.getItem('jira:pat'); } catch { /* ignore */ }
+    if (!token || !jiraId) return undefined;
+    let cancelled = false;
+    jiraFetch(token, `issue?key=${encodeURIComponent(jiraId)}`)
+      .then((d) => { if (!cancelled) setLive(d); })
+      .catch(() => { if (!cancelled) setLive(null); });
+    return () => { cancelled = true; };
+  }, [jiraId]);
 
   // Auto-refresh when a chat turn finishes (a completed stage's artifacts appear
   // without a manual reload). Skips the initial mount.
@@ -154,8 +172,27 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
 
   const phaseLabel = stages.length && stages[0].n >= 5 ? `stages ${stages[0].n}–${stages[stages.length - 1].n}` : 'pipeline';
 
-  const labelsCell = jira.labels && jira.labels.length ? (
-    <span className="row wrap" style={{ gap: 6 }}>{jira.labels.map((l) => <span key={l} className="badge">{l}</span>)}</span>
+  // Live Jira overrides (when a PAT is connected) reflect the real ticket; fall
+  // back to the docs snapshot otherwise.
+  const priorityCls = (p) => {
+    const l = (p || '').toLowerCase();
+    if (l === 'critical' || l === 'high' || l === 'highest') return 'high';
+    if (l === 'medium') return 'medium';
+    return 'low';
+  };
+  const statusName = live?.status || shortStatus;
+  const statusCls = live?.status
+    ? (live.statusCategory === 'done' ? 'ok' : live.statusCategory === 'indeterminate' ? 'active' : '')
+    : statusChip;
+  const priority = live?.priority || null;
+  const labels = live?.labels && live.labels.length ? live.labels : jira.labels || [];
+  const storyPoints = live?.storyPoints ?? jira.storyPoints;
+  const assigneeName = live?.assignee?.displayName || displayName(jira.owner);
+  const assigneeInitials = initials(live?.assignee?.displayName || live?.assignee?.name || jira.owner);
+  const fixVersions = live?.fixVersions && live.fixVersions.length ? live.fixVersions : null;
+
+  const labelsCell = labels.length ? (
+    <span className="row wrap" style={{ gap: 6 }}>{labels.map((l) => <span key={l} className="badge">{l}</span>)}</span>
   ) : '—';
   const epicCell = jira.epic ? <a href={epicUrl} target="_blank" rel="noreferrer">{jira.epic}</a> : '—';
 
@@ -172,17 +209,20 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
 
         <div className="jira-head">
           <div className="jira-head-main">
-            <div className="jira-eyebrow"><IconTicket width={13} height={13} /> Jira ticket</div>
+            <div className="jira-eyebrow">
+              <IconTicket width={13} height={13} /> Jira ticket
+              {live && <span className="jira-live" title="Live from Jira">live</span>}
+            </div>
             <a className="jira-key mono" href={jira.url || `${JIRA_BROWSE}/${jira.id}`} target="_blank" rel="noreferrer" title="Open in Jira">{jira.id}</a>
             <h1 className="jira-title">{jira.title || ''}</h1>
             <div className="row wrap" style={{ gap: 8, marginTop: 16 }}>
-              <span className={`badge badge-status ${statusChip}`}>{shortStatus}</span>
-              {jira.storyPoints != null && <span className="badge">{jira.storyPoints} pts</span>}
-              {jira.impactLevel && (
-                <span className={`impact-chip impact-${jira.impactLevel.toLowerCase()}`}>
-                  <span className="dot" />{jira.impactLevel} impact
-                </span>
-              )}
+              <span className={`badge badge-status ${statusCls}`}>{statusName}</span>
+              {storyPoints != null && <span className="badge">{storyPoints} pts</span>}
+              {priority ? (
+                <span className={`impact-chip impact-${priorityCls(priority)}`}><span className="dot" />{priority} priority</span>
+              ) : jira.impactLevel ? (
+                <span className={`impact-chip impact-${jira.impactLevel.toLowerCase()}`}><span className="dot" />{jira.impactLevel} impact</span>
+              ) : null}
             </div>
             {jira.lifecycleStatus && jira.lifecycleStatus !== shortStatus && (
               <div className="jira-status-note">{jira.lifecycleStatus}</div>
@@ -190,10 +230,11 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
             <div className="jira-meta">
               <div>
                 <span className="k">Assignee</span>
-                <span className="v jira-assignee"><span className="avatar">{initials(jira.owner)}</span>{displayName(jira.owner)}</span>
+                <span className="v jira-assignee"><span className="avatar">{assigneeInitials}</span>{assigneeName}</span>
               </div>
               <div><span className="k">Epic</span><span className="v">{epicCell}</span></div>
               <div><span className="k">Labels</span><span className="v">{labelsCell}</span></div>
+              {fixVersions && <div><span className="k">Fix version</span><span className="v">{fixVersions.join(', ')}</span></div>}
               <div><span className="k">Started</span><span className="v">{fmtDate(started) || '—'}</span></div>
               <div><span className="k">Last updated</span><span className="v">{fmtDate(lastUpdated) || '—'}</span></div>
             </div>

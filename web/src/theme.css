@@ -1948,6 +1948,13 @@ tbody tr:hover {
   letter-spacing: 0.08em;
   color: var(--accent);
 }
+.jira-live {
+  padding: 1px 6px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
 
 /* Stage hero inside a Jira ticket — visually distinct from the initiative hero. */
 .hero.is-jira {
