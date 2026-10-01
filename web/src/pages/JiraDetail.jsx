@@ -70,6 +70,7 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
   // Live Jira fields (status/priority/labels/…) overlaid on the docs data when a
   // PAT is connected — the docs reflect the SDLC pipeline, which lags the ticket.
   const [live, setLive] = useState(null);
+  const [liveError, setLiveError] = useState(null);
 
   // Selected stage lives in the URL (?stage=N) so it's shareable and reload-safe.
   const stageParam = searchParams.get('stage');
@@ -106,13 +107,14 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
   // header reflects the real status/priority/labels rather than the docs snapshot.
   useEffect(() => {
     setLive(null);
+    setLiveError(null);
     let token = null;
     try { token = localStorage.getItem('jira:pat'); } catch { /* ignore */ }
     if (!token || !token.trim() || !jiraId) return undefined;
     let cancelled = false;
     jiraFetch(token, `issue?key=${encodeURIComponent(jiraId)}`)
-      .then((d) => { if (!cancelled) setLive(d); })
-      .catch(() => { if (!cancelled) setLive(null); });
+      .then((d) => { if (!cancelled) { setLive(d); setLiveError(null); } })
+      .catch((e) => { if (!cancelled) { setLive(null); setLiveError(e.message || 'Could not load live Jira data.'); } });
     return () => { cancelled = true; };
   }, [jiraId]);
 
@@ -268,6 +270,15 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
           </button>
         </div>
       </div>
+
+      {liveError && (
+        <div className="live-warning">
+          <span>
+            <strong>Live Jira data unavailable.</strong> {liveError} Showing the pipeline snapshot (from docs).
+            Check your token in <Link to="/settings">Settings</Link>.
+          </span>
+        </div>
+      )}
 
       {jira.blocking.length > 0 && (
         <div className="zone red" style={{ marginBottom: 18 }}>
