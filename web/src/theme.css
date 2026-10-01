@@ -457,7 +457,7 @@ textarea {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 0;
-  padding: 18px 20px;
+  padding: 22px 24px;
   box-shadow: var(--shadow);
 }
 .card > h2 {
@@ -514,6 +514,41 @@ textarea {
   background: var(--active-soft);
   color: var(--active);
   border-color: transparent;
+}
+/* Prominent status pill (e.g. "In Progress") — solid fill for extra weight. */
+.badge.badge-status {
+  font-weight: 700;
+  border-color: transparent;
+}
+.badge.badge-status.active {
+  background: var(--active);
+  color: #fff;
+}
+.badge.badge-status.ok {
+  background: var(--ok);
+  color: #fff;
+}
+/* Impact — deliberately light (a small severity dot + muted text). */
+.impact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.impact-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: 0 0 auto;
+}
+.impact-chip.impact-medium .dot {
+  background: var(--warn);
+}
+.impact-chip.impact-high .dot,
+.impact-chip.impact-critical .dot {
+  background: var(--crit);
 }
 
 /* ---------------- Buttons ---------------- */
@@ -859,14 +894,20 @@ hr {
 /* ---------------- Mini pipeline strip ---------------- */
 .pipeline {
   display: flex;
-  gap: 3px;
+  gap: 1px;
   width: 100%;
 }
 .pipeline .cell {
   flex: 1;
-  height: 8px;
+  height: 10px;
   border-radius: 0;
   background: var(--panel-3);
+}
+.pipeline .cell:first-child {
+  border-radius: 3px 0 0 3px;
+}
+.pipeline .cell:last-child {
+  border-radius: 0 3px 3px 0;
 }
 .pipeline .cell.done {
   background: var(--ok);
@@ -1871,8 +1912,8 @@ tbody tr:hover {
 .jira-banner {
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  background: var(--accent-soft);
-  padding: 14px 18px 16px;
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--panel));
+  padding: 22px 26px 24px;
   margin-bottom: 18px;
 }
 .jira-crumbs {
@@ -1994,17 +2035,17 @@ tbody tr:hover {
 }
 .jira-actions {
   position: absolute;
-  top: 14px;
-  right: 18px;
+  top: 22px;
+  right: 26px;
   display: flex;
   gap: 8px;
 }
 .jira-head {
   display: grid;
   grid-template-columns: 1fr minmax(210px, 300px);
-  gap: 24px;
+  gap: 36px;
   align-items: start;
-  margin-top: 12px;
+  margin-top: 18px;
 }
 .jira-kicker {
   display: inline-flex;
@@ -2014,12 +2055,25 @@ tbody tr:hover {
   font-size: 13px;
   font-weight: 700;
 }
+.jira-key {
+  display: block;
+  width: fit-content;
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.jira-key:hover {
+  text-decoration: underline;
+}
 .jira-title {
   font-size: 23px;
   font-weight: 800;
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .jira-status-note {
   margin-top: 8px;
@@ -2031,8 +2085,8 @@ tbody tr:hover {
 .jira-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
-  gap: 14px 20px;
-  margin-top: 18px;
+  gap: 18px 26px;
+  margin-top: 28px;
 }
 .jira-meta > div {
   display: flex;
@@ -2071,10 +2125,10 @@ tbody tr:hover {
 }
 .jira-head-side {
   border-left: 1px solid var(--border);
-  padding-left: 20px;
+  padding-left: 28px;
 }
 .jira-progress-count {
-  font-size: 15px;
+  font-size: 20px;
   margin-top: 4px;
 }
 .jira-progress-count strong {

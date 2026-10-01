@@ -2,7 +2,6 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { initiativePath } from '../lib/paths';
-import { StageNodes } from '../components/StageNodes';
 import { PipelineStrip } from '../components/PipelineStrip';
 import { StageResults } from '../components/StageResults';
 import { StageBadge } from '../components/StageBadge';
@@ -173,12 +172,17 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
 
         <div className="jira-head">
           <div className="jira-head-main">
-            <div className="jira-kicker"><IconTicket width={13} height={13} /> <span className="mono">{jira.id}</span></div>
+            <div className="jira-eyebrow"><IconTicket width={13} height={13} /> Jira ticket</div>
+            <a className="jira-key mono" href={jira.url || `${JIRA_BROWSE}/${jira.id}`} target="_blank" rel="noreferrer" title="Open in Jira">{jira.id}</a>
             <h1 className="jira-title">{jira.title || ''}</h1>
-            <div className="row wrap" style={{ gap: 8, marginTop: 8 }}>
-              <span className={`badge ${statusChip}`}>{shortStatus}</span>
+            <div className="row wrap" style={{ gap: 8, marginTop: 16 }}>
+              <span className={`badge badge-status ${statusChip}`}>{shortStatus}</span>
               {jira.storyPoints != null && <span className="badge">{jira.storyPoints} pts</span>}
-              {jira.impactLevel && <span className="badge warn">{jira.impactLevel} impact</span>}
+              {jira.impactLevel && (
+                <span className={`impact-chip impact-${jira.impactLevel.toLowerCase()}`}>
+                  <span className="dot" />{jira.impactLevel} impact
+                </span>
+              )}
             </div>
             {jira.lifecycleStatus && jira.lifecycleStatus !== shortStatus && (
               <div className="jira-status-note">{jira.lifecycleStatus}</div>
@@ -234,18 +238,6 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
           </ul>
         </div>
       )}
-
-      <div className="card" style={{ marginBottom: 18 }}>
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-          <h2 style={{ margin: 0 }}>Delivery progress <span className="muted" style={{ fontWeight: 400 }}>({phaseLabel})</span></h2>
-          <span className="muted" style={{ fontSize: 12 }}>
-            {started && `Started ${fmtDate(started)}`}
-            {started && lastUpdated && ' · '}
-            {lastUpdated && `Last updated ${fmtDate(lastUpdated)}`}
-          </span>
-        </div>
-        <StageNodes cells={stages} onSelect={selectStage} selectedN={selectedStage?.n} />
-      </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
           <h2>Development</h2>
@@ -305,13 +297,20 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>Stage activity</h2>
-          {activeCell && (
-            <button className="btn sm ghost" onClick={() => chat.open(jira.id, `/seph-sdlc continue ${jira.id}`)}>
-              <IconPlay width={13} height={13} /> Continue stage
-            </button>
-          )}
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+          <h2 style={{ margin: 0 }}>Stage activity <span className="muted" style={{ fontWeight: 400 }}>({phaseLabel})</span></h2>
+          <div className="row" style={{ gap: 14, alignItems: 'baseline' }}>
+            <span className="muted" style={{ fontSize: 12 }}>
+              {started && `Started ${fmtDate(started)}`}
+              {started && lastUpdated && ' · '}
+              {lastUpdated && `Last updated ${fmtDate(lastUpdated)}`}
+            </span>
+            {activeCell && (
+              <button className="btn sm ghost" onClick={() => chat.open(jira.id, `/seph-sdlc continue ${jira.id}`)}>
+                <IconPlay width={13} height={13} /> Continue stage
+              </button>
+            )}
+          </div>
         </div>
         <div className="stage-activity">
           {activity.map((c) => {
