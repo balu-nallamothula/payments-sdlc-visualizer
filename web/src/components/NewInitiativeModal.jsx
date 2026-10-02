@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react';
 import { apiClient } from '../api/client';
+import { useGit } from '../context/GitContext';
+
+// New initiatives start from the docs repo's trunk; the pipeline branches
+// initiative/<slug> off it at kickoff.
+const MAIN_BRANCH = 'main';
 
 // Mirror the server's slugify so we can preview the folder name as the user types.
 const slugify = (s) =>
@@ -25,6 +30,7 @@ const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, margin: '1
 // (name, id, feature brief, greenfield, figma) and writes a fresh metadata.json;
 // the agents drive it forward from Stage 1. Calls onCreated(result) on success.
 export function NewInitiativeModal({ onClose, onCreated }) {
+  const { branch, checkout, count } = useGit();
   const [name, setName] = useState('');
   const [onePagerPath, setOnePagerPath] = useState('');
   const [figmaUrl, setFigmaUrl] = useState('');
@@ -42,12 +48,29 @@ export function NewInitiativeModal({ onClose, onCreated }) {
   const idPreview = `${slug}-${ym}`;
   const branchPreview = `initiative/${slug}`;
 
+  // New initiatives must be scaffolded on main, not on another initiative's
+  // branch (that would mix untracked files into its working tree). If we're off
+  // main, switch first as part of Create.
+  const needsSwitch = !!branch && branch !== MAIN_BRANCH;
+
   const submit = async (e) => {
     e?.preventDefault();
     if (!name.trim() || busy) return;
     setBusy(true);
     setError(null);
     try {
+      if (needsSwitch) {
+        try {
+          await checkout(MAIN_BRANCH);
+        } catch (err) {
+          setError(
+            `Couldn't switch the docs repo to ${MAIN_BRANCH}: ${err.message || 'checkout failed'}. ` +
+              `Commit or discard your changes on ${branch} first (use the branch switcher), then retry.`,
+          );
+          setBusy(false);
+          return;
+        }
+      }
       const { initiative } = await apiClient.createInitiative({
         initiativeName: name.trim(),
         onePagerPath: onePagerPath.trim(),
@@ -73,6 +96,21 @@ export function NewInitiativeModal({ onClose, onCreated }) {
             Creates the initiative scaffold the SDLC agents start from. It appears in the list at Stage 1, ready for the
             PRD creator to pick up.
           </p>
+
+          {needsSwitch && (
+            <div className="live-warning" style={{ marginTop: 4 }}>
+              <span>
+                The docs repo is on <span className="mono">{branch}</span>. New initiatives start from{' '}
+                <span className="mono">{MAIN_BRANCH}</span> — <strong>Create will switch to {MAIN_BRANCH} first</strong>.
+                {count > 0 && (
+                  <>
+                    {' '}You have {count} uncommitted change{count === 1 ? '' : 's'}; if the switch is blocked, commit or
+                    discard them first.
+                  </>
+                )}
+              </span>
+            </div>
+          )}
 
           <label style={labelStyle}>Initiative name *</label>
           <input
@@ -127,7 +165,13 @@ export function NewInitiativeModal({ onClose, onCreated }) {
               Cancel
             </button>
             <button className="btn primary" type="submit" disabled={!name.trim() || busy}>
-              {busy ? 'Creating…' : 'Create initiative'}
+              {busy
+                ? needsSwitch
+                  ? 'Switching & creating…'
+                  : 'Creating…'
+                : needsSwitch
+                  ? `Switch to ${MAIN_BRANCH} & create`
+                  : 'Create initiative'}
             </button>
           </div>
         </form>
