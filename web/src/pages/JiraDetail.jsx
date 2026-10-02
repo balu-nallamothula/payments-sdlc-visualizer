@@ -255,7 +255,6 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
               <div><span className="k">Labels</span><span className="v">{labelsCell}</span></div>
               {fixVersions && <div><span className="k">Fix version</span><span className="v">{fixVersions.join(', ')}</span></div>}
               <div><span className="k">Started</span><span className="v">{fmtDate(started) || '—'}</span></div>
-              <div><span className="k">Last updated</span><span className="v">{fmtDate(lastUpdated) || '—'}</span></div>
             </div>
           </div>
 
