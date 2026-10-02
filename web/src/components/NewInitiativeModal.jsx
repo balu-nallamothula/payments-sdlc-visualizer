@@ -27,9 +27,6 @@ const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, margin: '1
 export function NewInitiativeModal({ onClose, onCreated }) {
   const [name, setName] = useState('');
   const [pod, setPod] = useState('');
-  const [jiraEpic, setJiraEpic] = useState('');
-  const [initiativeId, setInitiativeId] = useState('');
-  const [docsBranch, setDocsBranch] = useState('');
   const [onePagerPath, setOnePagerPath] = useState('');
   const [figmaUrl, setFigmaUrl] = useState('');
   const [greenfield, setGreenfield] = useState(false);
@@ -41,8 +38,10 @@ export function NewInitiativeModal({ onClose, onCreated }) {
   const folder = podSlug ? `${podSlug}/${slug}` : slug;
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const idPlaceholder = slug ? `${slug}-${ym}` : 'auto';
-  const branchPlaceholder = slug ? `initiative/${slug}` : 'initiative/…';
+  // Auto-derived (not asked for): id, branch. The Jira epic isn't set here either
+  // — the agents create it at Stage 4 (jira-creator).
+  const idPreview = `${slug}-${ym}`;
+  const branchPreview = `initiative/${slug}`;
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -53,9 +52,6 @@ export function NewInitiativeModal({ onClose, onCreated }) {
       const { initiative } = await apiClient.createInitiative({
         initiativeName: name.trim(),
         pod: pod.trim(),
-        jiraEpic: jiraEpic.trim(),
-        initiativeId: initiativeId.trim(),
-        docsBranch: docsBranch.trim(),
         onePagerPath: onePagerPath.trim(),
         figmaUrl: figmaUrl.trim(),
         greenfield,
@@ -89,11 +85,6 @@ export function NewInitiativeModal({ onClose, onCreated }) {
             onChange={(e) => setName(e.target.value)}
             style={inputStyle}
           />
-          {slug && (
-            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-              Folder: <span className="mono">{folder}</span>
-            </div>
-          )}
 
           <label style={labelStyle}>Pod / group</label>
           <input
@@ -101,33 +92,6 @@ export function NewInitiativeModal({ onClose, onCreated }) {
             value={pod}
             placeholder="payments (optional — nests the initiative under the pod)"
             onChange={(e) => setPod(e.target.value)}
-            style={inputStyle}
-          />
-
-          <label style={labelStyle}>Jira Epic</label>
-          <input
-            type="text"
-            value={jiraEpic}
-            placeholder="PAY-6883"
-            onChange={(e) => setJiraEpic(e.target.value)}
-            style={inputStyle}
-          />
-
-          <label style={labelStyle}>Initiative ID</label>
-          <input
-            type="text"
-            value={initiativeId}
-            placeholder={idPlaceholder}
-            onChange={(e) => setInitiativeId(e.target.value)}
-            style={inputStyle}
-          />
-
-          <label style={labelStyle}>Docs branch</label>
-          <input
-            type="text"
-            value={docsBranch}
-            placeholder={branchPlaceholder}
-            onChange={(e) => setDocsBranch(e.target.value)}
             style={inputStyle}
           />
 
@@ -153,6 +117,15 @@ export function NewInitiativeModal({ onClose, onCreated }) {
             <input type="checkbox" checked={greenfield} onChange={(e) => setGreenfield(e.target.checked)} />
             Greenfield (no existing codebase to extend)
           </label>
+
+          {slug && (
+            <div style={{ marginTop: 18, padding: '12px 14px', background: 'var(--panel-2)', border: '1px solid var(--border)', fontSize: 12, lineHeight: 1.7 }}>
+              <div className="muted" style={{ marginBottom: 4 }}>Generated automatically:</div>
+              <div>Folder <span className="mono">{folder}</span></div>
+              <div>ID <span className="mono">{idPreview}</span> · Branch <span className="mono">{branchPreview}</span></div>
+              <div className="muted">Jira epic — created by the agents at Stage 4.</div>
+            </div>
+          )}
 
           {error && (
             <div className="row" style={{ marginTop: 16 }}>
