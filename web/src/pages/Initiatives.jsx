@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { InitiativeCard } from '../components/InitiativeCard';
 import { BranchSwitcher } from '../components/BranchSwitcher';
 import { NewInitiativeModal } from '../components/NewInitiativeModal';
-import { initiativePath } from '../lib/paths';
 import { useGit } from '../context/GitContext';
 
 export function InitiativesPage() {
@@ -14,7 +13,6 @@ export function InitiativesPage() {
   const [params] = useSearchParams();
   const q = (params.get('q') || '').toLowerCase();
   const { branch } = useGit();
-  const navigate = useNavigate();
 
   // Refetch when the branch changes — a switch reloads the list for that branch.
   useEffect(() => {
@@ -50,15 +48,7 @@ export function InitiativesPage() {
         </div>
       </div>
 
-      {creating && (
-        <NewInitiativeModal
-          onClose={() => setCreating(false)}
-          onCreated={(init) => {
-            setCreating(false);
-            navigate(initiativePath(init.id));
-          }}
-        />
-      )}
+      {creating && <NewInitiativeModal onClose={() => setCreating(false)} />}
 
       {filtered.length === 0 ? (
         <div className="card muted">No initiatives match your search.</div>

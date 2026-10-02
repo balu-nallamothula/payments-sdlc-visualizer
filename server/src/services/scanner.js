@@ -198,93 +198,9 @@ export async function getJiraDetail(initiativeId, jiraId) {
   return { dir, meta, jira };
 }
 
-/** Folder-safe single segment from an initiative name ("Paze Discover" -> "paze-discover"). */
-function slugify(s) {
-  return String(s)
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-/**
- * Create a new initiative scaffold on disk, in the shape the /seph-sdlc pipeline
- * expects to pick up at Stage 1:
- *   - ONE canonical kebab-case slug used for BOTH the folder and initiative_name
- *     (the pipeline requires initiative_name to be kebab-case AND to match the
- *     folder, which it resolves as <year>/<initiative_name>/ — so the folder is
- *     flat, never pod-nested).
- *   - every universal metadata key (phase "initiative", current_stage 1, empty
- *     stages/jiras/blocking/artifact_versions, review_overrides), plus the
- *     optional ones the form collects.
- * No branch is recorded: the pipeline creates initiative/<name> off main at
- * kickoff, so writing a branch that doesn't exist would be a false claim.
- * Returns { id, relPath, ... }.
- *
- * Coded errors: BAD_REQUEST (missing/unusable name), EXISTS (folder taken).
- */
-export async function createInitiative(params = {}) {
-  const rawName = String(params.initiativeName || '').trim();
-  if (!rawName) {
-    const e = new Error('Initiative name is required.');
-    e.code = 'BAD_REQUEST';
-    throw e;
-  }
-
-  // One slug for folder AND initiative_name (the pipeline keys off both matching).
-  const slug = slugify(params.slug || rawName);
-  if (!slug) {
-    const e = new Error('Could not derive a valid kebab-case name from that input.');
-    e.code = 'BAD_REQUEST';
-    throw e;
-  }
-
-  const dir = path.join(yearDir, slug);
-  if (fs.existsSync(dir)) {
-    const e = new Error(`An initiative "${slug}" already exists.`);
-    e.code = 'EXISTS';
-    throw e;
-  }
-
-  const now = new Date();
-  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const initiativeId = String(params.initiativeId || '').trim() || `${slug}-${ym}`;
-
-  // Stage 1 (PRD creator) needs a brief to work from. If a free-text idea was
-  // given (and no explicit brief path), seed inputs/one-pager.md with it so the
-  // scaffold is runnable, not an empty shell.
-  const idea = String(params.idea || '').trim();
-  let onePager = String(params.onePagerPath || '').trim();
-  if (!onePager && idea) onePager = 'inputs/one-pager.md';
-
-  // Build in the key order the agent-written files use; include every universal
-  // key (empty where the value isn't known yet) so the shape matches real files.
-  const meta = { initiative_id: initiativeId, initiative_name: slug };
-  meta.one_pager_path = onePager;
-  meta.created_at = now.toISOString();
-  meta.current_stage = 1;
-  meta.phase = 'initiative';
-  const epic = String(params.jiraEpic || '').trim();
-  if (epic) meta.jira_epic = epic;
-  const figma = String(params.figmaUrl || '').trim();
-  if (figma) meta.figma_url = figma;
-  if (params.greenfield) meta.greenfield = true;
-  meta.review_overrides = {};
-  meta.stages = {};
-  meta.blocking_conditions = [];
-  meta.jiras_created = [];
-  meta.artifact_versions = {};
-
-  await fsp.mkdir(dir, { recursive: true });
-  // Seed the one-pager only when we generated the path from a free-text idea.
-  if (idea && onePager === 'inputs/one-pager.md') {
-    await fsp.mkdir(path.join(dir, 'inputs'), { recursive: true });
-    await fsp.writeFile(path.join(dir, onePager), `# ${slug}\n\n${idea}\n`, 'utf8');
-  }
-  await fsp.writeFile(path.join(dir, 'metadata.json'), `${JSON.stringify(meta, null, 2)}\n`, 'utf8');
-  clearCache();
-  return { id: slug, relPath: slug, initiativeId, initiativeName: slug, onePagerPath: onePager };
-}
+// Creating a new initiative is delegated to the pipeline's own `/seph-sdlc create`
+// command (branch + dirs + full metadata + Stage 1), driven from the chat — the
+// visualizer no longer writes a scaffold itself.
 
 export function clearCache() {
   cache.clear();
