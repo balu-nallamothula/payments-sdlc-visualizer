@@ -208,10 +208,12 @@ function slugify(s) {
 }
 
 /**
- * Create a new initiative scaffold on disk: a folder under the year dir with a
- * metadata.json in the shape the SDLC agents produce at kickoff (phase
- * "initiative", current_stage 1, empty stages/jiras). The agents drive it
- * forward from there. Returns { id, relPath }.
+ * Create a new initiative scaffold on disk: a folder under the year dir (flat, or
+ * pod-nested <pod>/<project> per the project-docs README) with a metadata.json in
+ * the shape the SDLC agents produce at kickoff — all the keys every initiative
+ * carries (phase "initiative", current_stage 1, empty stages/jiras/blocking/
+ * artifact_versions, review_overrides), plus the optional ones the form collects.
+ * The agents drive it forward from there. Returns { id, relPath, ... }.
  *
  * Coded errors: BAD_REQUEST (missing/unusable name), EXISTS (folder taken).
  */
@@ -230,9 +232,13 @@ export async function createInitiative(params = {}) {
     throw e;
   }
 
-  const dir = path.join(yearDir, slug);
+  // Optional pod nests the initiative under <year>/<pod>/<project> (README layout);
+  // the scanner reads either flat or one level of pod nesting.
+  const podSlug = slugify(params.pod || '');
+  const relPath = podSlug ? `${podSlug}/${slug}` : slug;
+  const dir = path.join(yearDir, relPath);
   if (fs.existsSync(dir)) {
-    const e = new Error(`An initiative folder "${slug}" already exists.`);
+    const e = new Error(`An initiative folder "${relPath}" already exists.`);
     e.code = 'EXISTS';
     throw e;
   }
@@ -240,17 +246,25 @@ export async function createInitiative(params = {}) {
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const initiativeId = String(params.initiativeId || '').trim() || `${slug}-${ym}`;
+  // No canonical initiative-level branch key exists; follow the CLAUDE.md
+  // convention (initiative/<slug>) and record it under docs_branch (the key the
+  // per-jira metadata uses).
+  const docsBranch = String(params.docsBranch || '').trim() || `initiative/${slug}`;
 
-  // Build in the key order the agent-written files use.
+  // Build in the key order the agent-written files use; include every universal
+  // key (empty where the value isn't known yet) so the shape matches real files.
   const meta = { initiative_id: initiativeId, initiative_name: name };
-  const onePager = String(params.onePagerPath || '').trim();
-  if (onePager) meta.one_pager_path = onePager;
+  meta.one_pager_path = String(params.onePagerPath || '').trim();
   meta.created_at = now.toISOString();
   meta.current_stage = 1;
   meta.phase = 'initiative';
+  const epic = String(params.jiraEpic || '').trim();
+  if (epic) meta.jira_epic = epic;
   const figma = String(params.figmaUrl || '').trim();
   if (figma) meta.figma_url = figma;
   if (params.greenfield) meta.greenfield = true;
+  meta.docs_branch = docsBranch;
+  meta.review_overrides = {};
   meta.stages = {};
   meta.blocking_conditions = [];
   meta.jiras_created = [];
@@ -259,7 +273,7 @@ export async function createInitiative(params = {}) {
   await fsp.mkdir(dir, { recursive: true });
   await fsp.writeFile(path.join(dir, 'metadata.json'), `${JSON.stringify(meta, null, 2)}\n`, 'utf8');
   clearCache();
-  return { id: slug, relPath: slug, initiativeId, initiativeName: name };
+  return { id: relPath, relPath, initiativeId, initiativeName: name, docsBranch };
 }
 
 export function clearCache() {

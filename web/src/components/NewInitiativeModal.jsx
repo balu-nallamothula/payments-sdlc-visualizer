@@ -26,7 +26,10 @@ const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, margin: '1
 // the agents drive it forward from Stage 1. Calls onCreated(result) on success.
 export function NewInitiativeModal({ onClose, onCreated }) {
   const [name, setName] = useState('');
+  const [pod, setPod] = useState('');
+  const [jiraEpic, setJiraEpic] = useState('');
   const [initiativeId, setInitiativeId] = useState('');
+  const [docsBranch, setDocsBranch] = useState('');
   const [onePagerPath, setOnePagerPath] = useState('');
   const [figmaUrl, setFigmaUrl] = useState('');
   const [greenfield, setGreenfield] = useState(false);
@@ -34,9 +37,12 @@ export function NewInitiativeModal({ onClose, onCreated }) {
   const [error, setError] = useState(null);
 
   const slug = useMemo(() => slugify(name), [name]);
+  const podSlug = useMemo(() => slugify(pod), [pod]);
+  const folder = podSlug ? `${podSlug}/${slug}` : slug;
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const idPlaceholder = slug ? `${slug}-${ym}` : 'auto';
+  const branchPlaceholder = slug ? `initiative/${slug}` : 'initiative/…';
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -46,7 +52,10 @@ export function NewInitiativeModal({ onClose, onCreated }) {
     try {
       const { initiative } = await apiClient.createInitiative({
         initiativeName: name.trim(),
+        pod: pod.trim(),
+        jiraEpic: jiraEpic.trim(),
         initiativeId: initiativeId.trim(),
+        docsBranch: docsBranch.trim(),
         onePagerPath: onePagerPath.trim(),
         figmaUrl: figmaUrl.trim(),
         greenfield,
@@ -82,9 +91,27 @@ export function NewInitiativeModal({ onClose, onCreated }) {
           />
           {slug && (
             <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-              Folder: <span className="mono">{slug}</span>
+              Folder: <span className="mono">{folder}</span>
             </div>
           )}
+
+          <label style={labelStyle}>Pod / group</label>
+          <input
+            type="text"
+            value={pod}
+            placeholder="payments (optional — nests the initiative under the pod)"
+            onChange={(e) => setPod(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={labelStyle}>Jira Epic</label>
+          <input
+            type="text"
+            value={jiraEpic}
+            placeholder="PAY-6883"
+            onChange={(e) => setJiraEpic(e.target.value)}
+            style={inputStyle}
+          />
 
           <label style={labelStyle}>Initiative ID</label>
           <input
@@ -92,6 +119,15 @@ export function NewInitiativeModal({ onClose, onCreated }) {
             value={initiativeId}
             placeholder={idPlaceholder}
             onChange={(e) => setInitiativeId(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={labelStyle}>Docs branch</label>
+          <input
+            type="text"
+            value={docsBranch}
+            placeholder={branchPlaceholder}
+            onChange={(e) => setDocsBranch(e.target.value)}
             style={inputStyle}
           />
 
