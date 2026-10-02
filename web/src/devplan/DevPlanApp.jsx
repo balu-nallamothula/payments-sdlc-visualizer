@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import "./board.css";
 import { apiClient } from "../api/client.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
@@ -13,7 +13,6 @@ import { useBoardModel } from "./hooks/useBoardModel.js";
 import { useHistory } from "./hooks/useHistory.js";
 import { useSprintSnapshots } from "./hooks/useSprintSnapshots.js";
 import { useBoardIO } from "./hooks/useBoardIO.js";
-import SetupPanel from "./components/SetupPanel.jsx";
 import Kpis from "./components/Kpis.jsx";
 import Controls from "./components/Controls.jsx";
 import TeamPanel from "./components/TeamPanel.jsx";
@@ -51,7 +50,6 @@ const epicsOfInitiative = (d) =>
 export default function DevPlanApp() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [toast, setToast] = useState(null);
-  const [setupOpen, setSetupOpen] = useState(true);
   const [changesOpen, setChangesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(true);
   const [kpisOpen, setKpisOpen] = useLocalStorage("devplan:kpisOpen", true);
@@ -112,11 +110,8 @@ export default function DevPlanApp() {
     sortMode: plan.sortMode, team: team.team, selectedSprint: plan.selectedSprint,
   });
   const io = useBoardIO({
-    jira, plan, board, history, snapshots, allIssues, filters,
-    showToast, setSetupOpen, setActivePage,
+    jira, plan, board, history, snapshots, allIssues, filters, showToast,
   });
-
-  useEffect(() => { if (jira.hasData) setSetupOpen(false); }, [jira.hasData]);
 
   // Resolve the preload target from the URL and load it. Re-runs when the target
   // changes (e.g. picking a different initiative), so the board follows selection.
@@ -149,12 +144,9 @@ export default function DevPlanApp() {
       if (cancelled || !keys.length || loadedSig.current === sig) return;
       loadedSig.current = sig;
       setPreloadKeys(keys);
-      if (jira.token) {
-        jira.loadEpics(keys);
-        setSetupOpen(false);
-      } else {
-        setSetupOpen(true); // prompt connect with the keys prefilled
-      }
+      // With a token we auto-load; without one the empty state points to Settings
+      // (naming the wanted keys), where the board is set up.
+      if (jira.token) jira.loadEpics(keys);
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,7 +155,6 @@ export default function DevPlanApp() {
   const hasData = jira.hasData;
   const epicLabel = Object.values(jira.epics).map((e) => shortName(e)).join(" + ");
   const multiEpic = Object.keys(jira.epics).length > 1;
-  const onLoad = async (keys) => { if (await jira.loadEpics(keys)) setSetupOpen(false); };
 
   const connBadge = CONN_BADGE[jira.conn.color] || "";
 
@@ -202,20 +193,8 @@ export default function DevPlanApp() {
         <button className="btn sm" type="button" disabled={!hasData || jira.busy} onClick={jira.sync}>
           {jira.busy ? "Syncing…" : "Sync from Jira"}
         </button>
-        <button className="btn sm primary" type="button" onClick={() => setSetupOpen((s) => !s)}>
-          Connect & load
-        </button>
+        <Link className="btn sm primary" to="/settings">Board setup</Link>
       </div>
-
-      {setupOpen && (
-        <SetupPanel
-          key={preloadKeys.join(",") || "setup"}
-          token={jira.token} setToken={jira.setToken} log={jira.log} busy={jira.busy}
-          initialKeys={preloadKeys.length ? preloadKeys : Object.keys(jira.epics)}
-          onTest={jira.doTest} onClear={jira.clearToken} onLoad={onLoad}
-          onImport={io.onImportBoard}
-        />
-      )}
 
       {activePage === "board" && (hasData ? (
         <>
@@ -237,7 +216,16 @@ export default function DevPlanApp() {
         <section className="empty-state">
           <div className="empty-card">
             <h2>No epic loaded yet</h2>
-            <p>Connect with your Jira token and load an epic (e.g. <code>PAY-6883</code>) to build the board.</p>
+            <p>
+              {preloadKeys.length ? (
+                <>This initiative maps to <code>{preloadKeys.join(", ")}</code>. </>
+              ) : null}
+              {jira.token ? (
+                <>Load an epic in <Link to="/settings">Settings</Link> to build the board.</>
+              ) : (
+                <>Connect Jira and load an epic in <Link to="/settings">Settings</Link> to build the board.</>
+              )}
+            </p>
           </div>
         </section>
       ))}
