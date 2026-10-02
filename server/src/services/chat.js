@@ -115,6 +115,8 @@ async function createSdkSession({ onEvent, onClose }) {
       // Load user + project settings so installed skills/agents are discoverable.
       settingSources: ['user', 'project'],
       ...(plugins.length ? { plugins } : {}),
+      // Pin a model only if configured; otherwise let the engine choose its default.
+      ...(config.chatModel ? { model: config.chatModel } : {}),
       permissionMode: PERMISSION_MODE,
       disallowedTools: DISALLOWED_TOOLS,
       appendSystemPrompt: GATE_SYSTEM_PROMPT,
@@ -220,6 +222,7 @@ async function createCliSession({ onEvent, onClose }) {
     '--permission-mode', PERMISSION_MODE,
     '--disallowed-tools', DISALLOWED_TOOLS.join(','),
     '--append-system-prompt', GATE_SYSTEM_PROMPT,
+    ...(config.chatModel ? ['--model', config.chatModel] : []),
   ];
   const child = spawn(config.claudeBin, args, {
     cwd: config.execCwd,
