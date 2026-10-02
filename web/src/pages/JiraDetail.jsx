@@ -12,6 +12,25 @@ import { IconChat, IconCheck, IconExternal, IconGit, IconPlay, IconTicket } from
 
 const JIRA_BROWSE = 'https://jira.sephora.com/browse';
 
+// Labels can run long; show the first two and tuck the rest behind a toggle.
+const LABELS_SHOWN = 2;
+function LabelList({ labels }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!labels.length) return '—';
+  const shown = expanded ? labels : labels.slice(0, LABELS_SHOWN);
+  const hidden = labels.length - LABELS_SHOWN;
+  return (
+    <span className="row wrap" style={{ gap: 6 }}>
+      {shown.map((l) => <span key={l} className="badge">{l}</span>)}
+      {hidden > 0 && (
+        <button type="button" className="label-more" onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'show less' : `+${hidden} more`}
+        </button>
+      )}
+    </span>
+  );
+}
+
 // GitHub links from a normalized target repo (org/name → repo/branch/commit URLs).
 const repoBase = (r) => r.url || (r.organization && r.name ? `https://github.com/${r.organization}/${r.name}` : null);
 const shortSha = (s) => (s ? s.slice(0, 7) : '');
@@ -193,9 +212,7 @@ export function JiraDetailPage({ name: nameProp, jiraId: jiraIdProp }) {
   const assigneeInitials = initials(live?.assignee?.displayName || live?.assignee?.name || jira.owner);
   const fixVersions = live?.fixVersions && live.fixVersions.length ? live.fixVersions : null;
 
-  const labelsCell = labels.length ? (
-    <span className="row wrap" style={{ gap: 6 }}>{labels.map((l) => <span key={l} className="badge">{l}</span>)}</span>
-  ) : '—';
+  const labelsCell = <LabelList labels={labels} />;
   const epicCell = jira.epic ? <a href={epicUrl} target="_blank" rel="noreferrer">{jira.epic}</a> : '—';
 
   return (
