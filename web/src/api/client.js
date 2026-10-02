@@ -17,6 +17,26 @@ export const apiClient = {
   health: () => get('/api/health'),
   devplanConfig: () => get('/api/devplan/config'),
   initiatives: () => get('/api/initiatives'),
+  createInitiative: async (params) => {
+    const res = await fetch('/api/initiatives', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      let msg = `${res.status} ${res.statusText}`;
+      try {
+        const body = await res.json();
+        if (body?.error) msg = body.error;
+      } catch {
+        /* ignore */
+      }
+      const err = new Error(msg);
+      err.status = res.status; // 409 = folder already exists
+      throw err;
+    }
+    return res.json();
+  },
   initiative: (id, raw = false) =>
     get(`/api/initiatives/${encodeURIComponent(id)}${raw ? '?raw=1' : ''}`),
   jira: (initiativeId, jiraId, raw = false) =>

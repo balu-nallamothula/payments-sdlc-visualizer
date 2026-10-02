@@ -1,0 +1,139 @@
+import { useMemo, useState } from 'react';
+import { apiClient } from '../api/client';
+
+// Mirror the server's slugify so we can preview the folder name as the user types.
+const slugify = (s) =>
+  String(s)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const inputStyle = {
+  width: '100%',
+  padding: '9px 11px',
+  border: '1px solid var(--border)',
+  background: 'var(--panel-2)',
+  color: 'var(--text)',
+  font: 'inherit',
+  fontSize: 13,
+  outline: 'none',
+};
+const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, margin: '16px 0 6px' };
+
+// Scaffold a new initiative. Captures the parameters the SDLC agents start from
+// (name, id, feature brief, greenfield, figma) and writes a fresh metadata.json;
+// the agents drive it forward from Stage 1. Calls onCreated(result) on success.
+export function NewInitiativeModal({ onClose, onCreated }) {
+  const [name, setName] = useState('');
+  const [initiativeId, setInitiativeId] = useState('');
+  const [onePagerPath, setOnePagerPath] = useState('');
+  const [figmaUrl, setFigmaUrl] = useState('');
+  const [greenfield, setGreenfield] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const slug = useMemo(() => slugify(name), [name]);
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const idPlaceholder = slug ? `${slug}-${ym}` : 'auto';
+
+  const submit = async (e) => {
+    e?.preventDefault();
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { initiative } = await apiClient.createInitiative({
+        initiativeName: name.trim(),
+        initiativeId: initiativeId.trim(),
+        onePagerPath: onePagerPath.trim(),
+        figmaUrl: figmaUrl.trim(),
+        greenfield,
+      });
+      onCreated(initiative);
+    } catch (err) {
+      setError(err.message || 'Could not create the initiative.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onMouseDown={onClose}>
+      <div className="modal" style={{ width: 'min(560px, 96vw)' }} onMouseDown={(e) => e.stopPropagation()}>
+        <header>
+          <h3>New initiative</h3>
+          <button className="close" type="button" onClick={onClose} aria-label="Close">×</button>
+        </header>
+        <form className="body" onSubmit={submit}>
+          <p className="muted" style={{ marginTop: 0, fontSize: 12, lineHeight: 1.6 }}>
+            Creates the initiative scaffold the SDLC agents start from. It appears in the list at Stage 1, ready for the
+            PRD creator to pick up.
+          </p>
+
+          <label style={labelStyle}>Initiative name *</label>
+          <input
+            type="text"
+            value={name}
+            autoFocus
+            placeholder="Paze Discover"
+            onChange={(e) => setName(e.target.value)}
+            style={inputStyle}
+          />
+          {slug && (
+            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              Folder: <span className="mono">{slug}</span>
+            </div>
+          )}
+
+          <label style={labelStyle}>Initiative ID</label>
+          <input
+            type="text"
+            value={initiativeId}
+            placeholder={idPlaceholder}
+            onChange={(e) => setInitiativeId(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={labelStyle}>Feature brief / one-pager path</label>
+          <input
+            type="text"
+            value={onePagerPath}
+            placeholder="inputs/one-pager.md"
+            onChange={(e) => setOnePagerPath(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={labelStyle}>Figma URL</label>
+          <input
+            type="text"
+            value={figmaUrl}
+            placeholder="https://www.figma.com/design/…"
+            onChange={(e) => setFigmaUrl(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label className="row" style={{ gap: 8, marginTop: 16, fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={greenfield} onChange={(e) => setGreenfield(e.target.checked)} />
+            Greenfield (no existing codebase to extend)
+          </label>
+
+          {error && (
+            <div className="row" style={{ marginTop: 16 }}>
+              <span className="badge crit">{error}</span>
+            </div>
+          )}
+
+          <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+            <button className="btn ghost" type="button" onClick={onClose} disabled={busy}>
+              Cancel
+            </button>
+            <button className="btn primary" type="submit" disabled={!name.trim() || busy}>
+              {busy ? 'Creating…' : 'Create initiative'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

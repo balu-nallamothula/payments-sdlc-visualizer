@@ -198,6 +198,70 @@ export async function getJiraDetail(initiativeId, jiraId) {
   return { dir, meta, jira };
 }
 
+/** Folder-safe single segment from an initiative name ("Paze Discover" -> "paze-discover"). */
+function slugify(s) {
+  return String(s)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Create a new initiative scaffold on disk: a folder under the year dir with a
+ * metadata.json in the shape the SDLC agents produce at kickoff (phase
+ * "initiative", current_stage 1, empty stages/jiras). The agents drive it
+ * forward from there. Returns { id, relPath }.
+ *
+ * Coded errors: BAD_REQUEST (missing/unusable name), EXISTS (folder taken).
+ */
+export async function createInitiative(params = {}) {
+  const name = String(params.initiativeName || '').trim();
+  if (!name) {
+    const e = new Error('Initiative name is required.');
+    e.code = 'BAD_REQUEST';
+    throw e;
+  }
+
+  const slug = slugify(params.slug || name);
+  if (!slug) {
+    const e = new Error('Could not derive a folder name from that initiative name.');
+    e.code = 'BAD_REQUEST';
+    throw e;
+  }
+
+  const dir = path.join(yearDir, slug);
+  if (fs.existsSync(dir)) {
+    const e = new Error(`An initiative folder "${slug}" already exists.`);
+    e.code = 'EXISTS';
+    throw e;
+  }
+
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const initiativeId = String(params.initiativeId || '').trim() || `${slug}-${ym}`;
+
+  // Build in the key order the agent-written files use.
+  const meta = { initiative_id: initiativeId, initiative_name: name };
+  const onePager = String(params.onePagerPath || '').trim();
+  if (onePager) meta.one_pager_path = onePager;
+  meta.created_at = now.toISOString();
+  meta.current_stage = 1;
+  meta.phase = 'initiative';
+  const figma = String(params.figmaUrl || '').trim();
+  if (figma) meta.figma_url = figma;
+  if (params.greenfield) meta.greenfield = true;
+  meta.stages = {};
+  meta.blocking_conditions = [];
+  meta.jiras_created = [];
+  meta.artifact_versions = {};
+
+  await fsp.mkdir(dir, { recursive: true });
+  await fsp.writeFile(path.join(dir, 'metadata.json'), `${JSON.stringify(meta, null, 2)}\n`, 'utf8');
+  clearCache();
+  return { id: slug, relPath: slug, initiativeId, initiativeName: name };
+}
+
 export function clearCache() {
   cache.clear();
 }

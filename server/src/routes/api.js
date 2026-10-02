@@ -6,6 +6,7 @@ import {
   listInitiatives,
   getInitiativeDetail,
   getJiraDetail,
+  createInitiative,
 } from '../services/scanner.js';
 import { getStages, getStage, getReferenceDoc } from '../services/coaching.js';
 import { readArtifact, writeArtifact, listArtifacts } from '../services/artifacts.js';
@@ -144,6 +145,18 @@ api.get('/initiatives', async (req, res, next) => {
   try {
     res.json({ initiatives: await listInitiatives() });
   } catch (err) {
+    next(err);
+  }
+});
+
+// Create a new initiative scaffold (folder + metadata.json) from the form params.
+api.post('/initiatives', async (req, res, next) => {
+  try {
+    const created = await createInitiative(req.body || {});
+    res.status(201).json({ initiative: created });
+  } catch (err) {
+    const map = { BAD_REQUEST: 400, EXISTS: 409 };
+    if (err.code && map[err.code]) return res.status(map[err.code]).json({ error: err.message });
     next(err);
   }
 });

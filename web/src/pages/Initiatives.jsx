@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { InitiativeCard } from '../components/InitiativeCard';
 import { BranchSwitcher } from '../components/BranchSwitcher';
+import { NewInitiativeModal } from '../components/NewInitiativeModal';
+import { initiativePath } from '../lib/paths';
 import { useGit } from '../context/GitContext';
 
 export function InitiativesPage() {
   const [initiatives, setInitiatives] = useState(null);
   const [error, setError] = useState(null);
+  const [creating, setCreating] = useState(false);
   const [params] = useSearchParams();
   const q = (params.get('q') || '').toLowerCase();
   const { branch } = useGit();
+  const navigate = useNavigate();
 
   // Refetch when the branch changes — a switch reloads the list for that branch.
   useEffect(() => {
@@ -32,7 +36,10 @@ export function InitiativesPage() {
   return (
     <div>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
-        <h1 className="page-title">Initiatives</h1>
+        <div className="row" style={{ gap: 14, alignItems: 'center' }}>
+          <h1 className="page-title" style={{ margin: 0 }}>Initiatives</h1>
+          <button className="btn primary" onClick={() => setCreating(true)}>New initiative</button>
+        </div>
         <div className="row" style={{ gap: 12 }}>
           <BranchSwitcher />
           <span className="muted">
@@ -42,6 +49,16 @@ export function InitiativesPage() {
           </span>
         </div>
       </div>
+
+      {creating && (
+        <NewInitiativeModal
+          onClose={() => setCreating(false)}
+          onCreated={(init) => {
+            setCreating(false);
+            navigate(initiativePath(init.id));
+          }}
+        />
+      )}
 
       {filtered.length === 0 ? (
         <div className="card muted">No initiatives match your search.</div>
