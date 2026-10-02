@@ -13,7 +13,6 @@ import { IconChat } from './components/icons';
 import { InitiativesPage } from './pages/Initiatives';
 import { InitiativeRoute } from './pages/InitiativeRoute';
 import { StagesPage } from './pages/Stages';
-import { IntegrationsPage } from './pages/Integrations';
 import { ArtifactsPage } from './pages/Artifacts';
 import { DevPlanPage } from './pages/DevPlan';
 import { SettingsPage } from './pages/Settings';
@@ -58,7 +57,6 @@ function Shell() {
             <Route path="/stages" element={<StagesPage />} />
             <Route path="/artifacts" element={<ArtifactsPage />} />
             <Route path="/dev-plan/*" element={<DevPlanPage />} />
-            <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>

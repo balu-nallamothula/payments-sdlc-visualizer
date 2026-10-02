@@ -5,7 +5,6 @@ import {
   IconChevronLeft,
   IconDoc,
   IconLayers,
-  IconPlug,
   IconSettings,
   IconStages,
 } from './icons';
@@ -23,7 +22,6 @@ const SECTIONS = [
     items: [
       { to: '/artifacts', label: 'Artifacts', icon: IconDoc },
       { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar, devPlan: true },
-      { to: '/integrations', label: 'Integrations', icon: IconPlug },
     ],
   },
   {
