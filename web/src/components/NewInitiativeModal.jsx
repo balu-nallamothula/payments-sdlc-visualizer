@@ -32,6 +32,7 @@ const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, margin: '1
 export function NewInitiativeModal({ onClose, onCreated }) {
   const { branch, checkout, count } = useGit();
   const [name, setName] = useState('');
+  const [idea, setIdea] = useState('');
   const [onePagerPath, setOnePagerPath] = useState('');
   const [figmaUrl, setFigmaUrl] = useState('');
   const [greenfield, setGreenfield] = useState(false);
@@ -73,6 +74,7 @@ export function NewInitiativeModal({ onClose, onCreated }) {
       }
       const { initiative } = await apiClient.createInitiative({
         initiativeName: name.trim(),
+        idea: idea.trim(),
         onePagerPath: onePagerPath.trim(),
         figmaUrl: figmaUrl.trim(),
         greenfield,
@@ -122,7 +124,19 @@ export function NewInitiativeModal({ onClose, onCreated }) {
             style={inputStyle}
           />
 
-          <label style={labelStyle}>Feature brief / one-pager path</label>
+          <label style={labelStyle}>Idea / feature brief</label>
+          <textarea
+            value={idea}
+            rows={3}
+            placeholder="A sentence or two describing the idea — Stage 1 (PRD creator) starts from this."
+            onChange={(e) => setIdea(e.target.value)}
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+          <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+            Saved as <span className="mono">inputs/one-pager.md</span>. Or point to an existing brief below instead.
+          </div>
+
+          <label style={labelStyle}>…or path to an existing brief</label>
           <input
             type="text"
             value={onePagerPath}
@@ -151,6 +165,12 @@ export function NewInitiativeModal({ onClose, onCreated }) {
               <div>Name &amp; folder <span className="mono">{slug}</span> · ID <span className="mono">{idPreview}</span></div>
               <div className="muted">Branch <span className="mono">{branchPreview}</span> — created by the pipeline off <span className="mono">main</span> at kickoff.</div>
               <div className="muted">Jira epic — created by the agents at Stage 4.</div>
+            </div>
+          )}
+
+          {!idea.trim() && !onePagerPath.trim() && (
+            <div className="live-warning" style={{ marginTop: 14 }}>
+              <span>No brief yet — Stage 1 has nothing to read. Add an idea or a brief path, or fill it in later.</span>
             </div>
           )}
 
