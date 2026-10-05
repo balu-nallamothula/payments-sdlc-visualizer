@@ -1482,6 +1482,32 @@ tbody tr:hover {
 }
 
 /* Tool-call rendering in chat */
+/* Plain-language "story" line for Skill / agent tool calls (non-dev view). */
+.tool-story {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 13px;
+}
+.tool-story-icon {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.tool-story-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.tool-story-detail {
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tool {
   margin: 6px 0;
   border: 1px solid var(--border);

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '../context/ChatContext';
 import { Markdown } from './Markdown';
+import { agentInfo, skillInfo } from '../lib/agentLabels';
 import { IconCheck, IconChevronLeft, IconCollapse, IconCopy, IconExpand, IconPlug, IconPower, IconSave, IconSend, IconStop, IconTerminal } from './icons';
+
+// Tool calls that tell the pipeline's story (always shown, in plain language);
+// everything else is low-level noise gated behind the "Show bash commands" toggle.
+const STORY_TOOLS = new Set(['Skill', 'Task', 'Agent']);
 
 /**
  * View for one chat session. Reads the session object from the store and drives
@@ -19,7 +24,9 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
   const target = session.target;
 
   const [input, setInput] = useState('');
-  const [showTools, setShowTools] = useState(true);
+  // Default to the clean, non-dev view: the pipeline story (Skill/agent lines)
+  // always shows; the low-level bash/file tools stay hidden until toggled on.
+  const [showTools, setShowTools] = useState(false);
   const [tab, setTab] = useState('chat'); // 'chat' | 'agents'
   const [expandedAgent, setExpandedAgent] = useState(null);
   const [elapsed, setElapsed] = useState(0);
@@ -51,9 +58,11 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
       if (ev.kind === 'tool_use' && ev.tools) {
         for (const t of ev.tools) {
           if (t.name === 'Task' || t.name === 'Agent') {
+            const info = agentInfo(t.input?.subagent_type);
             map.set(t.id, {
               id: t.id,
-              label: t.input?.description || t.input?.subagent_type || 'sub-agent',
+              label: t.input?.subagent_type ? info.label : t.input?.description || 'sub-agent',
+              verb: t.input?.subagent_type ? info.verb : null,
               type: t.input?.subagent_type || null,
               prompt: t.input?.prompt || null,
               result: null,
@@ -251,6 +260,7 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
                       {t.status === 'done' ? <IconCheck width={14} height={14} /> : <span className="mini-spinner" />}
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="subagent-label" style={{ fontWeight: 600 }}>{t.label}</div>
+                        {t.verb && <div className="muted" style={{ fontSize: 12 }}>{t.verb}</div>}
                         {t.type && <div className="muted mono" style={{ fontSize: 11 }}>{t.type}</div>}
                       </div>
                       <IconChevronLeft
@@ -296,9 +306,24 @@ function extractText(content) {
   return '';
 }
 
+// Returns a friendly shape for the "story" tools (Skill / Task) — { Icon, title,
+// detail } rendered as a plain-language line — and the compact developer shape
+// ({ detail, prefix }) for everything else.
 function toolSummary(tool) {
   const inp = tool.input || {};
   switch (tool.name) {
+    case 'Skill': {
+      const { title, detail, Icon } = skillInfo(inp.args);
+      return { Icon, title, detail };
+    }
+    case 'Task':
+    case 'Agent': {
+      if (inp.subagent_type) {
+        const { label, verb, Icon } = agentInfo(inp.subagent_type);
+        return { Icon, title: label, detail: verb };
+      }
+      return { detail: inp.description };
+    }
     case 'Bash':
       return { detail: inp.command, prefix: '$ ' };
     case 'Read':
@@ -310,9 +335,6 @@ function toolSummary(tool) {
       return { detail: inp.pattern };
     case 'Glob':
       return { detail: inp.pattern };
-    case 'Task':
-    case 'Agent':
-      return { detail: inp.description || inp.subagent_type };
     default: {
       let d = '';
       try {
@@ -326,7 +348,21 @@ function toolSummary(tool) {
 }
 
 function ToolUse({ tool, running = false }) {
-  const { detail, prefix } = toolSummary(tool);
+  const { Icon, title, detail, prefix } = toolSummary(tool);
+
+  // Story tool (Skill / agent spawn): a plain-language line with an icon.
+  if (title) {
+    return (
+      <div className="tool-story">
+        {Icon && <Icon width={15} height={15} className="tool-story-icon" />}
+        <span className="tool-story-title">{title}</span>
+        {detail && <span className="tool-story-detail">{detail}</span>}
+        {running && <span className="mini-spinner" style={{ marginLeft: 'auto' }} />}
+      </div>
+    );
+  }
+
+  // Low-level tool: the developer-oriented terminal line.
   return (
     <div className="tool">
       <div className="tool-name">
@@ -351,7 +387,8 @@ function transcriptLine(event) {
     case 'tool_use':
       return (event.tools || [])
         .map((t) => {
-          const { detail, prefix } = toolSummary(t);
+          const { title, detail, prefix } = toolSummary(t);
+          if (title) return `**${title}**${detail ? ` — ${detail}` : ''}`;
           return detail ? `\`${(prefix || '') + detail}\`` : `⚙ ${t.name}`;
         })
         .join('\n');
@@ -412,6 +449,15 @@ function ChatMessage({ event, count = 1, showTools = true, running = false, onAn
   }
   if (kind === 'tool_use' && event.tools) {
     const askTool = event.tools.find((t) => t.name === 'AskUserQuestion');
+    // Story tools (the pipeline command + which agent is running) always show in
+    // plain language; low-level bash/file tools only when technical details are on.
+    const storyTools = event.tools.filter((t) => STORY_TOOLS.has(t.name));
+    const lowLevelTools = event.tools.filter((t) => !STORY_TOOLS.has(t.name) && t.name !== 'AskUserQuestion');
+    // Nothing visible (e.g. only hidden bash tools, no text) → render nothing
+    // rather than an empty gap.
+    if (!event.text && !askTool && !storyTools.length && !(showTools && lowLevelTools.length)) {
+      return null;
+    }
     return (
       <div style={{ margin: '8px 0' }}>
         {event.text && (
@@ -419,7 +465,9 @@ function ChatMessage({ event, count = 1, showTools = true, running = false, onAn
             <Markdown>{event.text}</Markdown>
           </Bubble>
         )}
-        {askTool ? <AskUserQuestion tool={askTool} onAnswer={onAnswer} /> : showTools ? event.tools.map((t) => <ToolUse key={t.id} tool={t} running={running} />) : null}
+        {askTool && <AskUserQuestion tool={askTool} onAnswer={onAnswer} />}
+        {storyTools.map((t) => <ToolUse key={t.id} tool={t} running={running} />)}
+        {showTools && lowLevelTools.map((t) => <ToolUse key={t.id} tool={t} running={running} />)}
       </div>
     );
   }
