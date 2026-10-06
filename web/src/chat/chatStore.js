@@ -5,9 +5,14 @@
 // immutable (replaced on every change). Live handles (WebSocket, pending command)
 // are kept in side maps off the snapshot so they aren't serialized.
 
+import { markPendingCreate } from '../lib/pendingCreate';
+
 const STORAGE_KEY = 'sdlc-chats-v2';
 const MAX_LOG = 300;
 const MAX_HISTORY = 40;
+
+// A new-initiative kickoff, e.g. "/seph-sdlc create Add Stripe Link…".
+const CREATE_CMD_RE = /^\/seph-sdlc\s+create\b/i;
 
 const wsMap = new Map(); // id -> WebSocket
 const pendingMap = new Map(); // id -> command to auto-send once open
@@ -158,6 +163,9 @@ function send(id, text) {
   const s = sessions.find((x) => x.id === id);
   // Title a session from its first real message.
   if (s && (!s.title || s.title === 'New chat')) patch(id, { title: text.replace(/^\/seph-sdlc\s*/, '').slice(0, 40) || 'Chat' });
+  // Remember a create kickoff so the app can jump to the initiative once the
+  // pipeline writes its metadata.json.
+  if (CREATE_CMD_RE.test(text)) markPendingCreate();
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'send', text }));
     appendEvent(id, { kind: 'user', text });

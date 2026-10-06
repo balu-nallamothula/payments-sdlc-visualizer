@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { InitiativeCard } from '../components/InitiativeCard';
 import { BranchSwitcher } from '../components/BranchSwitcher';
 import { NewInitiativeModal } from '../components/NewInitiativeModal';
 import { useGit } from '../context/GitContext';
+import { useSSE } from '../hooks/useSSE';
 
 export function InitiativesPage() {
   const [initiatives, setInitiatives] = useState(null);
@@ -14,13 +15,27 @@ export function InitiativesPage() {
   const q = (params.get('q') || '').toLowerCase();
   const { branch } = useGit();
 
-  // Refetch when the branch changes — a switch reloads the list for that branch.
-  useEffect(() => {
+  const load = useCallback(() => {
     apiClient
       .initiatives()
       .then((r) => setInitiatives(r.initiatives))
       .catch((e) => setError(e.message));
-  }, [branch]);
+  }, []);
+
+  // Refetch when the branch changes — a switch reloads the list for that branch.
+  useEffect(() => {
+    load();
+  }, [branch, load]);
+
+  // Live-refresh: when the pipeline writes/updates initiative files, reload the
+  // list so new initiatives (and progress) appear without a manual refresh.
+  // Debounced because a running stage touches metadata repeatedly.
+  const debounceRef = useRef(null);
+  useSSE(true, () => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(load, 400);
+  });
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   if (error) return <div className="card">Failed to load initiatives: {error}</div>;
   if (!initiatives) return <div className="spinner">Loading initiatives…</div>;

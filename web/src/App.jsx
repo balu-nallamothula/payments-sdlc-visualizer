@@ -7,6 +7,7 @@ import { CurrentInitiativeProvider } from './context/CurrentInitiativeContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { InitiativeCreateWatcher } from './components/InitiativeCreateWatcher';
 import { ChatPanel } from './components/ChatPanel';
 import { ChatRail } from './components/ChatRail';
 import { IconChat } from './components/icons';
@@ -46,6 +47,7 @@ function Shell() {
   const [collapsed, setCollapsed] = useState(false);
   return (
     <div className={`layout ${collapsed ? 'collapsed' : ''}`}>
+      <InitiativeCreateWatcher />
       <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <div className="main">
         <TopBar />
