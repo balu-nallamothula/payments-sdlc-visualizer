@@ -1710,6 +1710,14 @@ tbody tr:hover {
   background: var(--panel);
   padding: 14px 16px;
 }
+/* Editable preview (contenteditable) — show the caret, no focus ring. */
+.md-editable {
+  cursor: text;
+  outline: none;
+}
+.md-editable:focus {
+  border-color: var(--accent);
+}
 
 .breadcrumb {
   color: var(--muted);
