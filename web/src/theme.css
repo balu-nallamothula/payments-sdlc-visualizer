@@ -1650,37 +1650,65 @@ tbody tr:hover {
   border-color: var(--accent);
 }
 
-/* WYSIWYG Markdown editor (MDXEditor) */
-.sdlc-mdx {
+/* Markdown editor (toolbar + source + preview) */
+.md-editor {
+  display: flex;
+  flex-direction: column;
+}
+.md-editor-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.md-editor-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+}
+.md-tab {
+  background: var(--panel-2);
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.md-tab + .md-tab {
+  border-left: 1px solid var(--border);
+}
+.md-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.md-tool {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.md-tool:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.md-editor-preview {
+  min-height: 55vh;
+  max-height: 55vh;
+  overflow: auto;
   border: 1px solid var(--border);
   background: var(--panel);
-}
-.sdlc-mdx-content {
-  min-height: 50vh;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-/* The toolbar defaults to overflow-x:auto, which clips the block-type (Paragraph)
-   and list dropdowns that open beneath it. Let it wrap instead so popups show. */
-.sdlc-mdx [class*='_toolbarRoot_'] {
-  overflow: visible;
-  flex-wrap: wrap;
-}
-/* The editor's dropdowns are popper-positioned and portaled into the editor root.
-   When the editor is in a modal, two things break them: the scrollable modal body
-   clips them, and the backdrop-filter backdrop becomes the containing block for
-   their fixed positioning. Only when the editor is present, drop the blur and let
-   the body overflow, and float the popups above the modal. */
-.modal-backdrop:has(.sdlc-mdx) {
-  backdrop-filter: none;
-}
-.modal .body:has(.sdlc-mdx) {
-  overflow: visible;
-}
-[class*='_selectContainer_'],
-[class*='_popupContainer_'],
-[data-radix-popper-content-wrapper] {
-  z-index: 60;
+  padding: 14px 16px;
 }
 
 .breadcrumb {

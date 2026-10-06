@@ -1,12 +1,9 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import { useGit } from '../context/GitContext';
 import { Modal } from './Modal';
 import { Markdown } from './Markdown';
-
-// The WYSIWYG editor pulls in a sizable dependency — load it only when a user
-// actually edits a Markdown file.
-const MarkdownEditor = lazy(() => import('./MarkdownEditor'));
+import { MarkdownEditor } from './MarkdownEditor';
 
 function safePretty(txt) {
   try {
@@ -107,9 +104,7 @@ export function ArtifactViewer({ path, repoCtx, onClose }) {
       {artifact &&
         (editing ? (
           artifact.ext === '.md' ? (
-            <Suspense fallback={<div className="spinner">Loading editor…</div>}>
-              <MarkdownEditor value={draft} onChange={setDraft} />
-            </Suspense>
+            <MarkdownEditor value={draft} onChange={setDraft} repoCtx={repoCtx} />
           ) : (
             <textarea
               className="artifact-editor"
