@@ -1660,6 +1660,12 @@ tbody tr:hover {
   max-height: 60vh;
   overflow-y: auto;
 }
+/* The toolbar defaults to overflow-x:auto, which clips the block-type (Paragraph)
+   and list dropdowns that open beneath it. Let it wrap instead so popups show. */
+.sdlc-mdx [class*='_toolbarRoot_'] {
+  overflow: visible;
+  flex-wrap: wrap;
+}
 
 .breadcrumb {
   color: var(--muted);

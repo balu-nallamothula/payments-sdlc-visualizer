@@ -62,10 +62,10 @@ export default function MarkdownEditor({ value, onChange }) {
         codeBlockPlugin({ defaultCodeBlockLanguage: '' }),
         codeMirrorPlugin({ codeBlockLanguages: CODE_LANGS }),
         markdownShortcutPlugin(),
-        diffSourcePlugin({ viewMode: 'rich', diffMarkdown: value }),
+        diffSourcePlugin({ viewMode: 'rich' }),
         toolbarPlugin({
           toolbarContents: () => (
-            <DiffSourceToggleWrapper>
+            <DiffSourceToggleWrapper options={['rich', 'source']}>
               <UndoRedo />
               <Separator />
               <BoldItalicUnderlineToggles />
