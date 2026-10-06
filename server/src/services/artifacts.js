@@ -169,6 +169,9 @@ export async function listArtifacts(initiativeId, jiraId = null) {
       if (e.name.startsWith('.')) continue;
       const abs = path.join(current, e.name);
       if (e.isDirectory()) {
+        // telemetry/ holds pipeline-internal run logs — never a user or
+        // visualizer artifact, so hide it at any depth.
+        if (e.name === 'telemetry') continue;
         if (current === base && skipDirs.has(e.name)) continue;
         await walk(abs, depth + 1);
       } else if (e.isFile()) {
