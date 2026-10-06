@@ -37,17 +37,33 @@ const GATE_SYSTEM_PROMPT = [
 
 const DISALLOWED_TOOLS = ['AskUserQuestion'];
 
+// Build a user-message `content` from text + optional pasted/uploaded images.
+// Plain string when there are no images (unchanged behavior); otherwise the
+// Anthropic content-block array with base64 image blocks (same shape the SDK and
+// the CLI stream-json input both accept). images: [{ media_type, data }].
+function userContent(text, images) {
+  if (!Array.isArray(images) || !images.length) return text;
+  const blocks = [];
+  if (text) blocks.push({ type: 'text', text });
+  for (const img of images) {
+    if (img && img.data && img.media_type) {
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: img.media_type, data: img.data } });
+    }
+  }
+  return blocks.length ? blocks : text;
+}
+
 /** A pushable async-generator used to stream user turns into a live SDK query. */
 function createInputStream() {
   const queue = [];
   let resolveNext = null;
   let closed = false;
 
-  function push(text) {
+  function push(text, images) {
     if (closed) return;
     const msg = {
       type: 'user',
-      message: { role: 'user', content: text },
+      message: { role: 'user', content: userContent(text, images) },
       parent_tool_use_id: null,
       session_id: '',
     };
@@ -141,7 +157,7 @@ async function createSdkSession({ onEvent, onClose }) {
   })();
 
   return {
-    send: (text) => input.push(text),
+    send: (text, images) => input.push(text, images),
     interrupt: async () => {
       try {
         if (typeof q.interrupt === 'function') await q.interrupt();
@@ -252,10 +268,10 @@ async function createCliSession({ onEvent, onClose }) {
     onClose?.();
   });
 
-  function send(text) {
+  function send(text, images) {
     const msg = {
       type: 'user',
-      message: { role: 'user', content: text },
+      message: { role: 'user', content: userContent(text, images) },
       parent_tool_use_id: null,
       session_id: '',
     };

@@ -14,6 +14,23 @@ import { createChatSession } from './services/chat.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Validate pasted/uploaded images from the client before forwarding to the engine:
+// allowlisted media types, base64 payload, capped size (~5MB raw) and count.
+const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGES = 8;
+function sanitizeImages(images) {
+  if (!Array.isArray(images)) return undefined;
+  const out = [];
+  for (const img of images.slice(0, MAX_IMAGES)) {
+    if (!img || !IMAGE_TYPES.has(img.media_type) || typeof img.data !== 'string' || !img.data) continue;
+    // base64 → ~3/4 bytes; reject oversized payloads.
+    if (img.data.length * 0.75 > MAX_IMAGE_BYTES) continue;
+    out.push({ media_type: img.media_type, data: img.data });
+  }
+  return out.length ? out : undefined;
+}
+
 // Preflight: the whole app reads a live git repo at SEPHORA_PROJECT_DOCS. If that
 // folder is missing, every poll of /api/git/status (and the scanner) fails, which
 // used to spew git stack traces on a loop. Fail once here, loudly and clearly,
@@ -100,7 +117,7 @@ wss.on('connection', async (ws) => {
       return;
     }
     if (msg.type === 'send' && typeof msg.text === 'string') {
-      session.send(msg.text);
+      session.send(msg.text, sanitizeImages(msg.images));
     } else if (msg.type === 'interrupt') {
       await session.interrupt();
     }

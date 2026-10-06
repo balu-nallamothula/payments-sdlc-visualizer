@@ -35,9 +35,22 @@ function commit() {
   listeners.forEach((l) => l());
 }
 
+// Drop base64 image payloads before persisting — they'd blow the localStorage
+// quota. The lightweight marker ({media_type}) keeps the log shape so a reloaded
+// session shows a "[image]" placeholder instead of the full picture.
+function stripLogImages(log) {
+  return log.map((item) => {
+    const ev = item.event;
+    if (ev && Array.isArray(ev.images) && ev.images.length) {
+      return { ...item, event: { ...ev, images: ev.images.map((im) => ({ media_type: im.media_type })) } };
+    }
+    return item;
+  });
+}
+
 function persist() {
   try {
-    const enc = (s) => ({ id: s.id, title: s.title, target: s.target, createdAt: s.createdAt, log: s.log.slice(-MAX_LOG) });
+    const enc = (s) => ({ id: s.id, title: s.title, target: s.target, createdAt: s.createdAt, log: stripLogImages(s.log.slice(-MAX_LOG)) });
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ sessions: sessions.map(enc), history: history.slice(0, MAX_HISTORY).map(enc), activeId }),
@@ -158,17 +171,23 @@ function connect(id) {
   };
 }
 
-function send(id, text) {
+function send(id, text, images) {
   const ws = wsMap.get(id);
   const s = sessions.find((x) => x.id === id);
+  const t = text || '';
+  const imgs = Array.isArray(images) && images.length ? images : null;
   // Title a session from its first real message.
-  if (s && (!s.title || s.title === 'New chat')) patch(id, { title: text.replace(/^\/seph-sdlc\s*/, '').slice(0, 40) || 'Chat' });
+  if (s && (!s.title || s.title === 'New chat')) {
+    patch(id, { title: t.replace(/^\/seph-sdlc\s*/, '').slice(0, 40) || (imgs ? 'Image' : 'Chat') });
+  }
   // Remember a create kickoff so the app can jump to the initiative once the
   // pipeline writes its metadata.json.
-  if (CREATE_CMD_RE.test(text)) markPendingCreate();
+  if (CREATE_CMD_RE.test(t)) markPendingCreate();
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'send', text }));
-    appendEvent(id, { kind: 'user', text });
+    const payload = { type: 'send', text: t };
+    if (imgs) payload.images = imgs;
+    ws.send(JSON.stringify(payload));
+    appendEvent(id, { kind: 'user', text: t, images: imgs || undefined });
     patch(id, { busy: true });
   }
 }

@@ -2,11 +2,31 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '../context/ChatContext';
 import { Markdown } from './Markdown';
 import { agentInfo, skillInfo } from '../lib/agentLabels';
-import { IconCheck, IconChevronLeft, IconCollapse, IconCopy, IconExpand, IconPlug, IconPower, IconSave, IconSend, IconStop, IconTerminal } from './icons';
+import { IconCheck, IconChevronLeft, IconCollapse, IconCopy, IconExpand, IconImage, IconPlug, IconPower, IconSave, IconSend, IconStop, IconTerminal } from './icons';
 
 // Tool calls that tell the pipeline's story (always shown, in plain language);
 // everything else is low-level noise gated behind the "Show bash commands" toggle.
 const STORY_TOOLS = new Set(['Skill', 'Task', 'Agent']);
+
+// Image attachments (paste/upload) — must match the server's allowlist + cap.
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENTS = 8;
+
+function fileToAttachment(file) {
+  return new Promise((resolve, reject) => {
+    if (!IMAGE_TYPES.includes(file.type)) return reject(new Error(`${file.name || 'That file'} isn't a supported image (PNG, JPEG, GIF, WebP).`));
+    if (file.size > MAX_IMAGE_BYTES) return reject(new Error(`${file.name || 'Image'} is too large (max 5 MB).`));
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      const data = dataUrl.slice(dataUrl.indexOf(',') + 1);
+      resolve({ id: `${Date.now()}_${Math.random().toString(36).slice(2)}`, name: file.name || 'image', mediaType: file.type, data, dataUrl });
+    };
+    reader.onerror = () => reject(new Error("Couldn't read the image."));
+    reader.readAsDataURL(file);
+  });
+}
 
 /**
  * View for one chat session. Reads the session object from the store and drives
@@ -24,6 +44,9 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
   const target = session.target;
 
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [attachError, setAttachError] = useState(null);
+  const fileRef = useRef(null);
   // Default to the clean, non-dev view: the pipeline story (Skill/agent lines)
   // always shows; the low-level bash/file tools stay hidden until toggled on.
   const [showTools, setShowTools] = useState(false);
@@ -86,10 +109,45 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
 
   function submit() {
     const text = input.trim();
-    if (!text) return;
-    chat.send(id, text);
+    if (!text && !attachments.length) return;
+    const images = attachments.map((a) => ({ media_type: a.mediaType, data: a.data }));
+    chat.send(id, text, images.length ? images : undefined);
     setInput('');
+    setAttachments([]);
+    setAttachError(null);
   }
+
+  async function addFiles(files) {
+    const list = Array.from(files || []).filter((f) => f.type?.startsWith('image/'));
+    if (!list.length) return;
+    setAttachError(null);
+    for (const f of list) {
+      try {
+        const a = await fileToAttachment(f);
+        setAttachments((prev) => (prev.length >= MAX_ATTACHMENTS ? prev : [...prev, a]));
+      } catch (e) {
+        setAttachError(e.message);
+      }
+    }
+  }
+
+  function onPaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file' && it.type?.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      addFiles(files);
+    }
+  }
+
+  const removeAttachment = (aid) => setAttachments((prev) => prev.filter((a) => a.id !== aid));
 
   function quick(cmd) {
     chat.send(id, target ? `${cmd} ${target}` : cmd);
@@ -225,18 +283,56 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
             </div>
           )}
 
-          <div className="row" style={{ padding: 14, borderTop: '1px solid var(--border)', gap: 8 }}>
-            <input
-              className="chat-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
-              placeholder={connected ? 'Type a message or command…' : 'Connect first'}
-              disabled={!connected}
-            />
-            <button className="btn primary" onClick={submit} disabled={!connected}>
-              <IconSend width={15} height={15} /> Send
-            </button>
+          <div style={{ borderTop: '1px solid var(--border)' }}>
+            {attachments.length > 0 && (
+              <div className="chat-attachments">
+                {attachments.map((a) => (
+                  <div key={a.id} className="chat-attachment" title={a.name}>
+                    <img src={a.dataUrl} alt={a.name} />
+                    <button type="button" className="chat-attachment-remove" onClick={() => removeAttachment(a.id)} aria-label="Remove image">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {attachError && (
+              <div style={{ padding: '0 14px 6px', fontSize: 11, color: 'var(--crit)' }}>{attachError}</div>
+            )}
+            <div className="row" style={{ padding: 14, gap: 8 }}>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => {
+                  addFiles(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                className="btn"
+                onClick={() => fileRef.current?.click()}
+                disabled={!connected}
+                title="Attach image"
+                aria-label="Attach image"
+              >
+                <IconImage width={15} height={15} />
+              </button>
+              <input
+                className="chat-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+                onPaste={onPaste}
+                placeholder={connected ? 'Type a message, paste or attach an image…' : 'Connect first'}
+                disabled={!connected}
+              />
+              <button className="btn primary" onClick={submit} disabled={!connected || (!input.trim() && !attachments.length)}>
+                <IconSend width={15} height={15} /> Send
+              </button>
+            </div>
           </div>
         </>
       ) : (
@@ -436,6 +532,17 @@ function ChatMessage({ event, count = 1, showTools = true, running = false, onAn
   if (kind === 'user') {
     return (
       <Bubble align="right" bg="var(--accent-soft)" border="transparent" color="var(--accent)" copyText={event.text}>
+        {event.images?.length > 0 && (
+          <div className="chat-msg-images">
+            {event.images.map((img, i) =>
+              img.data ? (
+                <img key={i} src={`data:${img.media_type};base64,${img.data}`} alt="attachment" />
+              ) : (
+                <span key={i} className="chat-msg-image-placeholder">🖼 image</span>
+              ),
+            )}
+          </div>
+        )}
         {event.text}
       </Bubble>
     );
