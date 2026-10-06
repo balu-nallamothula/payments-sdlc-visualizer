@@ -1666,6 +1666,22 @@ tbody tr:hover {
   overflow: visible;
   flex-wrap: wrap;
 }
+/* The editor's dropdowns are popper-positioned and portaled into the editor root.
+   When the editor is in a modal, two things break them: the scrollable modal body
+   clips them, and the backdrop-filter backdrop becomes the containing block for
+   their fixed positioning. Only when the editor is present, drop the blur and let
+   the body overflow, and float the popups above the modal. */
+.modal-backdrop:has(.sdlc-mdx) {
+  backdrop-filter: none;
+}
+.modal .body:has(.sdlc-mdx) {
+  overflow: visible;
+}
+[class*='_selectContainer_'],
+[class*='_popupContainer_'],
+[data-radix-popper-content-wrapper] {
+  z-index: 60;
+}
 
 .breadcrumb {
   color: var(--muted);
