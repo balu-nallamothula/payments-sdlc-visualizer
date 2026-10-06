@@ -343,7 +343,6 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
                   }
                 }}
                 onPaste={onPaste}
-                placeholder={connected ? 'Type a message… (Enter to send · Shift+Enter for a new line)' : 'Connect first'}
                 disabled={!connected}
               />
               <button className="btn primary" onClick={submit} disabled={!connected || (!input.trim() && !attachments.length)}>
