@@ -6,7 +6,7 @@ import { Markdown } from './Markdown';
 // renders with the app's own Markdown component. No WYSIWYG, so the round-trip is
 // always exactly the markdown you see.
 export function MarkdownEditor({ value, onChange, repoCtx }) {
-  const [mode, setMode] = useState('write'); // 'write' | 'preview'
+  const [mode, setMode] = useState('preview'); // 'preview' (formatted) | 'write' (code)
   const taRef = useRef(null);
 
   // Re-focus and restore a selection after a controlled value update lands.
@@ -97,11 +97,11 @@ export function MarkdownEditor({ value, onChange, repoCtx }) {
     <div className="md-editor">
       <div className="md-editor-bar">
         <div className="md-editor-tabs">
-          <button type="button" className={`md-tab ${mode === 'write' ? 'active' : ''}`} onClick={() => setMode('write')}>
-            Write
-          </button>
           <button type="button" className={`md-tab ${mode === 'preview' ? 'active' : ''}`} onClick={() => setMode('preview')}>
             Preview
+          </button>
+          <button type="button" className={`md-tab ${mode === 'write' ? 'active' : ''}`} onClick={() => setMode('write')}>
+            Code
           </button>
         </div>
         {mode === 'write' && (
