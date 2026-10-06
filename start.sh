@@ -18,7 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-WEB_URL="http://localhost:5317"
+WEB_PORT=5317
 
 say()  { printf "\n\033[1;36m==> %s\033[0m\n" "$1"; }
 ok()   { printf "\033[1;32m  ✓ %s\033[0m\n" "$1"; }
@@ -109,6 +109,14 @@ npm install
 ok "Dependencies installed"
 
 # --- 4. Launch ---------------------------------------------------------------
+# If 5317 is already taken, Vite falls back to the next free port (5318); open
+# that instead so the browser lands on the right tab.
+if command -v lsof >/dev/null 2>&1 && lsof -iTCP:5317 -sTCP:LISTEN >/dev/null 2>&1; then
+  WEB_PORT=5318
+  warn "Port 5317 is in use — the web UI will open on $WEB_PORT instead."
+fi
+WEB_URL="http://localhost:$WEB_PORT"
+
 say "Starting SDLC Visualizer"
 echo "  API : http://localhost:4317"
 echo "  Web : $WEB_URL"
