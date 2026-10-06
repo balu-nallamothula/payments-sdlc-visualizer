@@ -149,8 +149,8 @@ export function BranchSwitcher() {
         aria-expanded={open}
       >
         <IconGit width={14} height={14} />
-        <span className="branch-combo-current">{branch}</span>
-        <span className="branch-combo-caret">▾</span>
+        <span className="branch-combo-current">{busy ? 'Switching…' : branch}</span>
+        {busy ? <span className="mini-spinner" /> : <span className="branch-combo-caret">▾</span>}
       </button>
       {open && (
         <div className="branch-combo-pop" role="listbox">

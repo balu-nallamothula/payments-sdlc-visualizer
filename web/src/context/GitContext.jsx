@@ -8,9 +8,7 @@ const Ctx = createContext(null);
 export function GitProvider({ children }) {
   const [status, setStatus] = useState({ branch: null, files: [] });
 
-  const refresh = useCallback(() => {
-    apiClient.gitStatus().then(setStatus).catch(() => {});
-  }, []);
+  const refresh = useCallback(() => apiClient.gitStatus().then(setStatus).catch(() => {}), []);
 
   useEffect(() => {
     refresh();
@@ -24,7 +22,7 @@ export function GitProvider({ children }) {
   // failure (e.g. uncommitted changes) so the caller can surface the reason.
   const checkout = useCallback(async (branch, opts) => {
     const result = await apiClient.gitCheckout(branch, opts);
-    refresh();
+    await refresh(); // keep callers "busy" until the new branch is reflected
     return result;
   }, [refresh]);
 
