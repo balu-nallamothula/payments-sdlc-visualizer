@@ -1650,6 +1650,67 @@ tbody tr:hover {
   border-color: var(--accent);
 }
 
+/* Markdown editor (toolbar + source + preview) */
+.md-editor {
+  display: flex;
+  flex-direction: column;
+}
+.md-editor-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.md-editor-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+}
+.md-tab {
+  background: var(--panel-2);
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.md-tab + .md-tab {
+  border-left: 1px solid var(--border);
+}
+.md-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.md-tool {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.md-tool:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.md-editor-preview {
+  min-height: 55vh;
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px 16px;
+}
+
 .breadcrumb {
   color: var(--muted);
   font-size: 13px;

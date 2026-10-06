@@ -3,6 +3,7 @@ import { apiClient } from '../api/client';
 import { useGit } from '../context/GitContext';
 import { Modal } from './Modal';
 import { Markdown } from './Markdown';
+import { MarkdownEditor } from './MarkdownEditor';
 
 function safePretty(txt) {
   try {
@@ -102,12 +103,16 @@ export function ArtifactViewer({ path, repoCtx, onClose }) {
 
       {artifact &&
         (editing ? (
-          <textarea
-            className="artifact-editor"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            spellCheck={false}
-          />
+          artifact.ext === '.md' ? (
+            <MarkdownEditor value={draft} onChange={setDraft} repoCtx={repoCtx} />
+          ) : (
+            <textarea
+              className="artifact-editor"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              spellCheck={false}
+            />
+          )
         ) : (
           <>
             {artifact.ext === '.md' && <Markdown repoCtx={repoCtx}>{artifact.content}</Markdown>}
