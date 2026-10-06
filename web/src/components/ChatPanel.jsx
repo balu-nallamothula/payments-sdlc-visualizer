@@ -47,6 +47,7 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
   const [attachments, setAttachments] = useState([]);
   const [attachError, setAttachError] = useState(null);
   const fileRef = useRef(null);
+  const taRef = useRef(null);
   // Default to the clean, non-dev view: the pipeline story (Skill/agent lines)
   // always shows; the low-level bash/file tools stay hidden until toggled on.
   const [showTools, setShowTools] = useState(false);
@@ -71,6 +72,14 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
     const iv = setInterval(() => setElapsed(Math.round((Date.now() - start) / 1000)), 1000);
     return () => clearInterval(iv);
   }, [busy]);
+
+  // Auto-grow the composer textarea with its content (up to a cap, then scroll).
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [input]);
 
   const lastResult = useMemo(() => [...log].reverse().find((l) => l.event.kind === 'result')?.event, [log]);
 
@@ -299,7 +308,7 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
             {attachError && (
               <div style={{ padding: '0 14px 6px', fontSize: 11, color: 'var(--crit)' }}>{attachError}</div>
             )}
-            <div className="row" style={{ padding: 14, gap: 8 }}>
+            <div className="row" style={{ padding: 14, gap: 8, alignItems: 'flex-end' }}>
               <input
                 ref={fileRef}
                 type="file"
@@ -320,13 +329,21 @@ export function ChatPanel({ session, expanded, onToggleExpand }) {
               >
                 <IconImage width={15} height={15} />
               </button>
-              <input
+              <textarea
+                ref={taRef}
                 className="chat-input"
                 value={input}
+                rows={1}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submit()}
+                onKeyDown={(e) => {
+                  // Enter sends; Shift/Cmd/Ctrl/Alt+Enter inserts a newline (textarea default).
+                  if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
                 onPaste={onPaste}
-                placeholder={connected ? 'Type a message, paste or attach an image…' : 'Connect first'}
+                placeholder={connected ? 'Type a message… (Enter to send · Shift+Enter for a new line)' : 'Connect first'}
                 disabled={!connected}
               />
               <button className="btn primary" onClick={submit} disabled={!connected || (!input.trim() && !attachments.length)}>

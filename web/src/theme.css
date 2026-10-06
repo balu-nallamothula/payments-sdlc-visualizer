@@ -1350,8 +1350,14 @@ tbody tr:hover {
   border-radius: 0;
   color: var(--text);
   padding: 10px 12px;
+  font: inherit;
   font-size: 13px;
+  line-height: 1.5;
   outline: none;
+  resize: none;
+  min-height: 40px;
+  max-height: 160px;
+  overflow-y: auto;
 }
 .chat-input:focus {
   border-color: var(--accent);
