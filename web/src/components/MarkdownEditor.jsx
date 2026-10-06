@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Markdown } from './Markdown';
 
 // Dependency-free Markdown editor: a formatting toolbar that wraps/prefixes the
@@ -8,6 +8,26 @@ import { Markdown } from './Markdown';
 export function MarkdownEditor({ value, onChange, repoCtx }) {
   const [mode, setMode] = useState('preview'); // 'preview' (formatted) | 'write' (code)
   const taRef = useRef(null);
+  const pendingToolRef = useRef(null);
+
+  // Formatting edits the source, so a tool clicked in Preview switches to Code
+  // first; run the queued action once the textarea has mounted.
+  useEffect(() => {
+    if (mode === 'write' && pendingToolRef.current) {
+      const fn = pendingToolRef.current;
+      pendingToolRef.current = null;
+      fn();
+    }
+  }, [mode]);
+
+  function runTool(fn) {
+    if (mode === 'preview') {
+      pendingToolRef.current = fn;
+      setMode('write');
+    } else {
+      fn();
+    }
+  }
 
   // Re-focus and restore a selection after a controlled value update lands.
   function restore(start, end) {
@@ -104,15 +124,13 @@ export function MarkdownEditor({ value, onChange, repoCtx }) {
             Code
           </button>
         </div>
-        {mode === 'write' && (
-          <div className="md-toolbar">
-            {tools.map((t) => (
-              <button key={t.title} type="button" className="md-tool" title={t.title} style={t.style} onMouseDown={(e) => e.preventDefault()} onClick={t.run}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="md-toolbar">
+          {tools.map((t) => (
+            <button key={t.title} type="button" className="md-tool" title={t.title} style={t.style} onMouseDown={(e) => e.preventDefault()} onClick={() => runTool(t.run)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {mode === 'write' ? (
