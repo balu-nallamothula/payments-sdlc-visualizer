@@ -156,6 +156,24 @@ export default function DevPlanApp() {
   const epicLabel = Object.values(jira.epics).map((e) => shortName(e)).join(" + ");
   const multiEpic = Object.keys(jira.epics).length > 1;
 
+  // A specific board can be requested via ?epics= / ?initiative=. The board caches
+  // the last-loaded epics in localStorage, so without this guard, opening a
+  // DIFFERENT initiative would show the previous (stale) board whenever the
+  // requested one can't load (no token, or a failed fetch). Only treat the board
+  // as ready when the loaded epics are exactly the requested ones.
+  const loadedKeys = Object.keys(jira.epics);
+  const requestedKeys = explicitEpics
+    ? explicitEpics.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+    : preloadKeys;
+  const targetMatches =
+    requestedKeys.length === 0 ||
+    (loadedKeys.length === requestedKeys.length && requestedKeys.every((k) => loadedKeys.includes(k)));
+  const showBoard = hasData && targetMatches;
+  // Carry the requested epic(s) to Settings so its "Epic key(s)" field is prefilled.
+  const settingsHref = requestedKeys.length
+    ? `/settings?epics=${encodeURIComponent(requestedKeys.join(","))}`
+    : "/settings";
+
   const connBadge = CONN_BADGE[jira.conn.color] || "";
 
   return (
@@ -164,7 +182,7 @@ export default function DevPlanApp() {
         <div>
           <h1 className="page-title">Dev Plan</h1>
           <p className="page-sub">
-            {hasData ? epicLabel : "Load an epic to see its tickets across sprints & systems."}
+            {showBoard ? epicLabel : "Load an epic to see its tickets across sprints & systems."}
           </p>
         </div>
       </div>
@@ -184,19 +202,19 @@ export default function DevPlanApp() {
         </div>
         <div className="spacer" />
         <span className={`badge ${connBadge}`} title={jira.conn.text}>{jira.conn.text}</span>
-        {hasData && (
+        {showBoard && (
           <button className="btn sm" type="button" disabled={!plan.dirtyCount} onClick={() => setChangesOpen(true)}
             title="Discard local moves and snap tickets back to their Jira sprint">
             Undo Local Changes{plan.dirtyCount ? ` (${plan.dirtyCount})` : ""}
           </button>
         )}
-        <button className="btn sm" type="button" disabled={!hasData || jira.busy} onClick={jira.sync}>
+        <button className="btn sm" type="button" disabled={!showBoard || jira.busy} onClick={jira.sync}>
           {jira.busy ? "Syncing…" : "Sync from Jira"}
         </button>
         <Link className="btn sm primary" to="/settings">Board setup</Link>
       </div>
 
-      {activePage === "board" && (hasData ? (
+      {activePage === "board" && (showBoard ? (
         <>
           {kpisOpen && <Kpis kpis={board.kpis} />}
           <Controls
@@ -212,14 +230,35 @@ export default function DevPlanApp() {
             multiEpic={multiEpic}
           />
         </>
+      ) : requestedKeys.length && !targetMatches ? (
+        // A specific initiative was requested but its board isn't loaded (loading,
+        // failed, or no token) — show that, never the previous cached board.
+        <section className="empty-state">
+          <div className="empty-card">
+            {jira.busy ? (
+              <>
+                <h2>Loading {requestedKeys.join(", ")}…</h2>
+                <p>Fetching this initiative's board from Jira.</p>
+              </>
+            ) : (
+              <>
+                <h2>Couldn't load {requestedKeys.join(", ")}</h2>
+                <p>
+                  {jira.token ? (
+                    <>Jira didn't return this board. Check the epic or your token in <Link to={settingsHref}>Settings</Link>.</>
+                  ) : (
+                    <>Connect Jira in <Link to={settingsHref}>Settings</Link> to load this initiative's board.</>
+                  )}
+                </p>
+              </>
+            )}
+          </div>
+        </section>
       ) : (
         <section className="empty-state">
           <div className="empty-card">
             <h2>No epic loaded yet</h2>
             <p>
-              {preloadKeys.length ? (
-                <>This initiative maps to <code>{preloadKeys.join(", ")}</code>. </>
-              ) : null}
               {jira.token ? (
                 <>Load an epic in <Link to="/settings">Settings</Link> to build the board.</>
               ) : (

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { testConnection } from '../devplan/jira.js';
 import { loadEpicsToBoard, importBoardToStore } from '../devplan/boardStore.js';
 import { readJsonFile } from '../devplan/download.js';
@@ -82,7 +82,10 @@ function JiraConnectionCard({ token, onSave }) {
 
 function DevPlanBoardCard({ token }) {
   const connected = !!(token && token.trim());
-  const [epicText, setEpicText] = useState('');
+  // Prefill the epic(s) when arriving from an initiative (…/settings?epics=PAY-7867),
+  // so you land here ready to just hit "Load epics".
+  const [params] = useSearchParams();
+  const [epicText, setEpicText] = useState(() => (params.get('epics') || '').replace(/,/g, ', '));
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState({ text: '', error: false, done: false });
   const fileRef = useRef(null);
