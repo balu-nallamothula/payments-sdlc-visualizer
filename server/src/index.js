@@ -64,7 +64,20 @@ function preflight() {
 
 preflight();
 
+// Behind a reverse proxy (e.g. Nova) the app is mounted under a sub-path and the
+// full prefixed path is forwarded. Strip it once, at the edge, so routes declared
+// as "/api/..." still match. Empty-safe — a no-op when BASE_PATH is unset (local).
+const BASE_PATH = (process.env.BASE_PATH || '').replace(/\/+$/, '');
+
 const app = express();
+if (BASE_PATH) {
+  app.use((req, res, next) => {
+    if (req.url === BASE_PATH || req.url.startsWith(`${BASE_PATH}/`) || req.url.startsWith(`${BASE_PATH}?`)) {
+      req.url = req.url.slice(BASE_PATH.length) || '/';
+    }
+    next();
+  });
+}
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use('/api', api);
@@ -88,8 +101,9 @@ app.use((err, req, res, next) => {
 
 const server = http.createServer(app);
 
-// WebSocket chat gateway at /ws/chat.
-const wss = new WebSocketServer({ server, path: '/ws/chat' });
+// WebSocket chat gateway at /ws/chat (prefixed with the mount path so the upgrade
+// request matches behind a reverse proxy; just /ws/chat standalone).
+const wss = new WebSocketServer({ server, path: `${BASE_PATH}/ws/chat` });
 
 wss.on('connection', async (ws) => {
   const sendJson = (obj) => {

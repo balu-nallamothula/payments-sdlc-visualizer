@@ -1,10 +1,11 @@
 // Thin client for the host's read-only Jira proxy (server at /api/devplan/jira/*).
+import { apiPath } from "../lib/basePath";
 
 export async function jiraFetch(token, path) {
   if (!token) throw new Error("Paste your Personal Access Token in the Connect panel.");
   let res;
   try {
-    res = await fetch(`/api/devplan/jira/${path}`, { headers: { "X-Jira-Token": token } });
+    res = await fetch(apiPath(`/api/devplan/jira/${path}`), { headers: { "X-Jira-Token": token } });
   } catch {
     throw new Error("Couldn't reach the server. Make sure the SDLC Visualizer server is running.");
   }

@@ -1,5 +1,7 @@
+import { apiPath } from '../lib/basePath';
+
 async function get(url) {
-  const res = await fetch(url);
+  const res = await fetch(apiPath(url));
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try {
@@ -36,7 +38,7 @@ export const apiClient = {
     ),
   artifact: (path) => get(`/api/artifact?path=${encodeURIComponent(path)}`),
   saveArtifact: async (path, content) => {
-    const res = await fetch('/api/artifact', {
+    const res = await fetch(apiPath('/api/artifact'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path, content }),
@@ -56,7 +58,7 @@ export const apiClient = {
   gitStatus: () => get('/api/git/status'),
   gitBranches: () => get('/api/git/branches'),
   gitCheckout: async (branch, { force = false } = {}) => {
-    const res = await fetch('/api/git/checkout', {
+    const res = await fetch(apiPath('/api/git/checkout'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branch, force }),
@@ -76,7 +78,7 @@ export const apiClient = {
     return res.json();
   },
   suggestCommitMessage: async () => {
-    const res = await fetch('/api/git/suggest-message', { method: 'POST' });
+    const res = await fetch(apiPath('/api/git/suggest-message'), { method: 'POST' });
     if (!res.ok) {
       let msg = `${res.status} ${res.statusText}`;
       try {
@@ -90,7 +92,7 @@ export const apiClient = {
     return res.json();
   },
   gitCommit: async (message, paths) => {
-    const res = await fetch('/api/git/commit', {
+    const res = await fetch(apiPath('/api/git/commit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, paths }),

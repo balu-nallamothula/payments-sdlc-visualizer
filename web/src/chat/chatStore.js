@@ -6,6 +6,7 @@
 // are kept in side maps off the snapshot so they aren't serialized.
 
 import { markPendingCreate } from '../lib/pendingCreate';
+import { BASE_PATH } from '../lib/basePath';
 
 const STORAGE_KEY = 'sdlc-chats-v2';
 const MAX_LOG = 300;
@@ -137,7 +138,7 @@ function connect(id) {
   if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) return;
   patch(id, { state: 'connecting' });
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${window.location.host}/ws/chat`);
+  const ws = new WebSocket(`${proto}://${window.location.host}${BASE_PATH}/ws/chat`);
   wsMap.set(id, ws);
 
   ws.onopen = () => {
