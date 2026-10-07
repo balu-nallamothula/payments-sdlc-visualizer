@@ -103,6 +103,36 @@ else
   ok ".env already exists — leaving it as-is"
 fi
 
+# --- 2b. Pre-flight: the docs repo the app reads must exist ------------------
+# Checked here so a missing/mis-pathed repo fails with a clear message, instead
+# of the API exiting at launch and taking the web server down with it (which
+# looks like a cryptic "localhost refused to connect").
+say "Checking the docs repo"
+DOCS="$(grep -E '^[[:space:]]*SEPHORA_PROJECT_DOCS=' .env 2>/dev/null | tail -1 | cut -d'=' -f2- | sed -e 's/[[:space:]]*#.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/")"
+DOCS="${DOCS:-$HOME/workspace/sephora-project-docs}"
+case "$DOCS" in
+  "~") DOCS="$HOME" ;;
+  "~/"*) DOCS="$HOME/${DOCS#\~/}" ;;
+esac
+if [ ! -d "$DOCS" ]; then
+  printf "\n\033[1;31m✗ Can't start: sephora-project-docs was not found.\033[0m\n\n"
+  echo "  The visualizer reads a local clone of sephora-project-docs, but nothing"
+  echo "  exists at the configured path:"
+  echo
+  echo "      $DOCS"
+  echo
+  echo "  Fix it one of two ways, then re-run ./start.sh:"
+  echo
+  echo "    1) Clone the repo to that location, for example:"
+  echo "         git clone <sephora-project-docs-url> \"$DOCS\""
+  echo
+  echo "    2) Or point the app at an existing clone — edit .env and set:"
+  echo "         SEPHORA_PROJECT_DOCS=/full/path/to/your/sephora-project-docs"
+  echo
+  exit 1
+fi
+ok "Docs repo: $DOCS"
+
 # --- 3. Install dependencies -------------------------------------------------
 say "Installing dependencies (this can take a minute the first time)"
 npm install
