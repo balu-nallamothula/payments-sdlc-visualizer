@@ -6,6 +6,8 @@ import {
   listInitiatives,
   getInitiativeDetail,
   getJiraDetail,
+  listSystems,
+  getSystemDetail,
 } from '../services/scanner.js';
 import { getStages, getStage, getReferenceDoc } from '../services/coaching.js';
 import { readArtifact, writeArtifact, listArtifacts } from '../services/artifacts.js';
@@ -172,6 +174,26 @@ api.get('/initiatives/:name/jiras/:jiraId', async (req, res, next) => {
     const payload = { jira: detail.jira };
     if (req.query.raw === '1') payload.raw = detail.meta;
     res.json(payload);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Cross-AMP steward index: every repo impacted across all AMPs, and per-repo detail.
+api.get('/systems', async (req, res, next) => {
+  try {
+    res.json({ systems: await listSystems() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/systems/:repo', async (req, res, next) => {
+  try {
+    const quarter = req.query.quarter ? String(req.query.quarter) : null;
+    const system = await getSystemDetail(req.params.repo, quarter);
+    if (!system) return res.status(404).json({ error: 'System not found' });
+    res.json({ system });
   } catch (err) {
     next(err);
   }

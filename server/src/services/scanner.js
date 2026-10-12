@@ -198,6 +198,117 @@ export async function getJiraDetail(initiativeId, jiraId) {
   return { dir, meta, jira };
 }
 
+// ---- Cross-AMP systems index (steward view) --------------------------------
+// Invert the same initiative→jira walk into "which AMPs/jiras touch each repo".
+// The repo (target_repositories[].name) is the join key. Reuses the mtime-cached
+// readJsonSafe/listJiras, so repeated calls are cheap.
+
+function impactBucket(level) {
+  const s = String(level || '').trim().toUpperCase();
+  if (s === 'CRITICAL' || s === 'HIGHEST') return 'critical';
+  if (s === 'HIGH') return 'high';
+  if (s === 'MEDIUM' || s === 'MED') return 'medium';
+  if (s === 'LOW') return 'low';
+  return 'unscored';
+}
+
+function toQuarter(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
+}
+
+// A stored quarter is "2026-Q3". Accept a query of "2026-Q3", "Q3", or "3".
+function matchesQuarter(stored, query) {
+  if (!stored) return false;
+  const q = String(query || '').trim().toUpperCase();
+  if (!q) return true;
+  if (stored.toUpperCase() === q) return true;
+  const m = stored.match(/Q(\d)$/i);
+  return m ? m[1] === q.replace(/^Q/, '') : false;
+}
+
+async function buildSystemsIndex() {
+  const dirs = await findInitiativeDirs();
+  const byRepo = new Map();
+  for (const d of dirs) {
+    const meta = await readJsonSafe(path.join(d.absPath, 'metadata.json'));
+    if (!meta) continue;
+    const initiative = normalizeInitiative({ id: d.id, relPath: d.relPath, meta });
+    const jiras = await listJiras(d.absPath);
+    for (const j of jiras) {
+      const repos = new Set((j.targetRepositories || []).map((r) => r.name).filter(Boolean));
+      for (const repo of repos) {
+        let agg = byRepo.get(repo);
+        if (!agg) {
+          agg = {
+            repo,
+            jiraCount: 0,
+            initiatives: new Set(),
+            impactCounts: { critical: 0, high: 0, medium: 0, low: 0, unscored: 0 },
+            jiras: [],
+          };
+          byRepo.set(repo, agg);
+        }
+        agg.jiraCount += 1;
+        agg.initiatives.add(initiative.id);
+        agg.impactCounts[impactBucket(j.impactLevel)] += 1;
+        agg.jiras.push({
+          initiativeId: initiative.id,
+          initiativeName: initiative.initiativeName,
+          jiraId: j.id,
+          title: j.title,
+          impactLevel: j.impactLevel,
+          currentStageN: j.currentStageN,
+          status: j.status,
+          component: j.component,
+          platform: j.platform,
+          prUrl: j.prUrl,
+          quarter: toQuarter(j.createdTimestamp || initiative.createdAt),
+        });
+      }
+    }
+  }
+  return [...byRepo.values()];
+}
+
+/** Summary of every repo touched across all AMPs (no per-jira detail). */
+export async function listSystems() {
+  const systems = await buildSystemsIndex();
+  return systems
+    .map((s) => ({ repo: s.repo, jiraCount: s.jiraCount, initiativeCount: s.initiatives.size, impactCounts: s.impactCounts }))
+    .sort((a, b) => b.jiraCount - a.jiraCount || a.repo.localeCompare(b.repo));
+}
+
+/** One repo's detail: every AMP/jira impacting it, optionally filtered by quarter. */
+export async function getSystemDetail(repo, quarter = null) {
+  const systems = await buildSystemsIndex();
+  const sys = systems.find((s) => s.repo === repo);
+  if (!sys) return null;
+  let jiras = quarter ? sys.jiras.filter((j) => matchesQuarter(j.quarter, quarter)) : sys.jiras;
+  const impactCounts = { critical: 0, high: 0, medium: 0, low: 0, unscored: 0 };
+  const inits = new Map();
+  for (const j of jiras) {
+    impactCounts[impactBucket(j.impactLevel)] += 1;
+    if (!inits.has(j.initiativeId)) inits.set(j.initiativeId, j.initiativeName);
+  }
+  jiras = [...jiras].sort(
+    (a, b) =>
+      (a.initiativeId || '').localeCompare(b.initiativeId || '') ||
+      String(a.jiraId).localeCompare(String(b.jiraId), undefined, { numeric: true }),
+  );
+  return {
+    repo: sys.repo,
+    jiraCount: jiras.length,
+    initiativeCount: inits.size,
+    initiatives: [...inits].map(([id, name]) => ({ id, name })),
+    impactCounts,
+    quarter: quarter || null,
+    jiras,
+  };
+}
+
 // Creating a new initiative is delegated to the pipeline's own `/seph-sdlc create`
 // command (branch + dirs + full metadata + Stage 1), driven from the chat — the
 // visualizer no longer writes a scaffold itself.

@@ -4,6 +4,7 @@ import {
   IconCalendar,
   IconChevronLeft,
   IconDoc,
+  IconGit,
   IconLayers,
   IconSettings,
   IconStages,
@@ -23,6 +24,10 @@ const SECTIONS = [
       { to: '/artifacts', label: 'Artifacts', icon: IconDoc },
       { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar, devPlan: true },
     ],
+  },
+  {
+    title: 'Command Center',
+    items: [{ to: '/systems', label: 'Systems', icon: IconGit }],
   },
   {
     title: 'System',

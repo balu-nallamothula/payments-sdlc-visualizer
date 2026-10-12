@@ -11,6 +11,17 @@
 const TAB_REGISTRY = [
   { id: 'overview', label: 'Overview' },
   { id: 'pipeline', label: 'AI SDLC Stages' },
+  {
+    id: 'impacted-systems',
+    label: 'Impacted Systems',
+    hasData: ({ detail }) => detail.jiras.some((j) => (j.targetRepositories || []).length > 0),
+  },
+  {
+    id: 'impact',
+    label: 'Impact',
+    hasData: ({ detail }) => detail.jiras.some((j) => j.impactLevel),
+  },
+  { id: 'readiness', label: 'Readiness' },
 ];
 
 export function buildTabs(ctx) {

@@ -17,6 +17,8 @@ import { StagesPage } from './pages/Stages';
 import { ArtifactsPage } from './pages/Artifacts';
 import { DevPlanPage } from './pages/DevPlan';
 import { SettingsPage } from './pages/Settings';
+import { SystemsPage } from './pages/Systems';
+import { SystemDetailPage } from './pages/SystemDetail';
 
 function ChatDock() {
   const chat = useChat();
@@ -59,6 +61,8 @@ function Shell() {
             <Route path="/stages" element={<StagesPage />} />
             <Route path="/artifacts" element={<ArtifactsPage />} />
             <Route path="/dev-plan/*" element={<DevPlanPage />} />
+            <Route path="/systems" element={<SystemsPage />} />
+            <Route path="/systems/:repo" element={<SystemDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>

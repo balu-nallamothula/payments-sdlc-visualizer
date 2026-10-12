@@ -1,20 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { PipelineStrip } from './PipelineStrip';
 import { jiraPath } from '../lib/paths';
-
-function impactClass(level) {
-  switch ((level || '').toUpperCase()) {
-    case 'CRITICAL':
-    case 'HIGH':
-      return 'crit';
-    case 'MEDIUM':
-      return 'warn';
-    case 'LOW':
-      return 'ok';
-    default:
-      return '';
-  }
-}
+import { impactClass } from '../lib/impact';
 
 export function JiraBoard({ initiativeId, jiras }) {
   const navigate = useNavigate();

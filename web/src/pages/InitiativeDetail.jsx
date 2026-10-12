@@ -15,6 +15,9 @@ import { useSSE } from '../hooks/useSSE';
 import { IconArrowLeft, IconCalendar, IconChat, IconPlay, IconStar } from '../components/icons';
 import { Tabs } from '../components/Tabs';
 import { buildTabs } from '../lib/tabData';
+import { ImpactedSystems } from '../components/ImpactedSystems';
+import { ImpactAssessment } from '../components/ImpactAssessment';
+import { ReadinessScore } from '../components/ReadinessScore';
 
 // Jira issue-key shape (e.g. PAY-6883); filters out placeholder epic refs.
 const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
@@ -135,6 +138,9 @@ export function InitiativeDetailPage({ name: nameProp }) {
 
   const { initiative, pipeline, jiras } = detail;
   const tabs = buildTabs({ detail });
+  // Fall back to Overview if the URL points at a tab that's disabled for this
+  // initiative (e.g. ?tab=impact on an AMP with no impact scored).
+  const shownTab = tabs.some((t) => t.id === activeTab && !t.disabled) ? activeTab : 'overview';
   // The current stage to continue. In the initiative phase that's an initiative
   // stage (target = initiative). In the per-jira phase with a single Jira it's
   // that Jira's active stage (target = jira id).
@@ -227,10 +233,10 @@ export function InitiativeDetailPage({ name: nameProp }) {
         </div>
       )}
 
-      <Tabs tabs={tabs} active={activeTab} onSelect={selectTab} />
+      <Tabs tabs={tabs} active={shownTab} onSelect={selectTab} />
 
       <div style={{ marginTop: 18 }}>
-        {activeTab === 'pipeline' ? (
+        {shownTab === 'pipeline' && (
           <>
             <div className="card" style={{ marginBottom: 18 }}>
               <h2>
@@ -273,7 +279,9 @@ export function InitiativeDetailPage({ name: nameProp }) {
               </>
             )}
           </>
-        ) : (
+        )}
+
+        {shownTab === 'overview' && (
           <>
             <div className="card" style={{ marginBottom: 18 }}>
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
@@ -288,6 +296,10 @@ export function InitiativeDetailPage({ name: nameProp }) {
             </div>
           </>
         )}
+
+        {shownTab === 'impacted-systems' && <ImpactedSystems jiras={jiras} />}
+        {shownTab === 'impact' && <ImpactAssessment jiras={jiras} />}
+        {shownTab === 'readiness' && <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} />}
       </div>
 
       {openArtifact && <ArtifactViewer path={openArtifact} repoCtx={repoCtx} onClose={() => setOpenArtifact(null)} />}
