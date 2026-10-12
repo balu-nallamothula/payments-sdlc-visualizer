@@ -18,6 +18,8 @@ import { buildTabs } from '../lib/tabData';
 import { ImpactedSystems } from '../components/ImpactedSystems';
 import { ImpactAssessment } from '../components/ImpactAssessment';
 import { ReadinessScore } from '../components/ReadinessScore';
+import { ContributionHub } from '../components/ContributionHub';
+import { QualityEvidence } from '../components/QualityEvidence';
 
 // Jira issue-key shape (e.g. PAY-6883); filters out placeholder epic refs.
 const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
@@ -299,6 +301,8 @@ export function InitiativeDetailPage({ name: nameProp }) {
 
         {shownTab === 'impacted-systems' && <ImpactedSystems jiras={jiras} />}
         {shownTab === 'impact' && <ImpactAssessment jiras={jiras} />}
+        {shownTab === 'contribution' && <ContributionHub initiativeId={name} />}
+        {shownTab === 'evidence' && <QualityEvidence jiras={jiras} initiativeId={name} />}
         {shownTab === 'readiness' && <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} />}
       </div>
 

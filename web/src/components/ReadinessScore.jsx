@@ -1,11 +1,5 @@
 import { CountUp } from './CountUp';
-
-// A gate_results value reads as passing when it says pass / skipped / absent / n/a
-// (gates are free-text like "pass (28/28…)" or "skipped/pass (iOS app…)").
-const gateOk = (v) => {
-  const s = String(v || '').toLowerCase();
-  return s.includes('pass') || s.startsWith('skip') || s === 'absent' || s === 'n/a';
-};
+import { rowGates, gatePasses } from '../lib/gates';
 
 const bandColor = (pct) => (pct >= 85 ? 'var(--ok)' : pct >= 60 ? 'var(--warn)' : 'var(--crit)');
 
@@ -16,14 +10,14 @@ export function ReadinessScore({ initiative, pipeline, jiras }) {
 
   dims.push({ label: 'Pipeline completion', pct: pipeline.percent, detail: `${pipeline.percent}% of 12 stages complete` });
 
-  const gated = jiras.filter((j) => j.gateResults);
+  const gated = jiras.map((j) => rowGates(j)).filter(Boolean);
   if (gated.length) {
     let pass = 0;
     let total = 0;
-    gated.forEach((j) =>
-      Object.values(j.gateResults).forEach((v) => {
+    gated.forEach((g) =>
+      Object.values(g).forEach((v) => {
         total += 1;
-        if (gateOk(v)) pass += 1;
+        if (gatePasses(v)) pass += 1;
       }),
     );
     dims.push({

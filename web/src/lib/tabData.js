@@ -8,6 +8,8 @@
 // Phase 1 ships the two tabs backed entirely by existing data; feature tabs
 // (Impacted Systems, Impact, Readiness, Contribution, Evidence, Architecture,
 // Guardrails, PR Review, FlowGuard) slot in as each phase lands.
+import { rowGates } from './gates';
+
 const TAB_REGISTRY = [
   { id: 'overview', label: 'Overview' },
   { id: 'pipeline', label: 'AI SDLC Stages' },
@@ -20,6 +22,18 @@ const TAB_REGISTRY = [
     id: 'impact',
     label: 'Impact',
     hasData: ({ detail }) => detail.jiras.some((j) => j.impactLevel),
+  },
+  {
+    id: 'contribution',
+    label: 'Contribution',
+    hasData: ({ detail }) => detail.jiras.length > 0,
+  },
+  {
+    id: 'evidence',
+    label: 'Quality Evidence',
+    // Enabled only when at least one jira produces a renderable gate row (keeps
+    // enable ↔ render in sync — rowGates is exactly what the tab renders).
+    hasData: ({ detail }) => detail.jiras.some((j) => rowGates(j)),
   },
   { id: 'readiness', label: 'Readiness' },
 ];

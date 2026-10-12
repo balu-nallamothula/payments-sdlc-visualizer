@@ -8,6 +8,7 @@ import {
   getJiraDetail,
   listSystems,
   getSystemDetail,
+  getContribution,
 } from '../services/scanner.js';
 import { getStages, getStage, getReferenceDoc } from '../services/coaching.js';
 import { readArtifact, writeArtifact, listArtifacts } from '../services/artifacts.js';
@@ -174,6 +175,16 @@ api.get('/initiatives/:name/jiras/:jiraId', async (req, res, next) => {
     const payload = { jira: detail.jira };
     if (req.query.raw === '1') payload.raw = detail.meta;
     res.json(payload);
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/initiatives/:name/contribution', async (req, res, next) => {
+  try {
+    const contribution = await getContribution(req.params.name);
+    if (!contribution) return res.status(404).json({ error: 'Initiative not found' });
+    res.json(contribution);
   } catch (err) {
     next(err);
   }

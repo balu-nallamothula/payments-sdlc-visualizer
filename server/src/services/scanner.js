@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { config, yearDir } from '../config.js';
-import { normalizeInitiative, normalizeJira, buildInitiativePipeline } from '../normalize.js';
+import { normalizeInitiative, normalizeJira, buildInitiativePipeline, normalizePrUrls } from '../normalize.js';
 
 // The stage the pipeline is actually working on — matches the detail view's
 // CurrentStageHero: active, else blocked, else first not-done; else the last
@@ -37,6 +37,18 @@ async function statMtime(p) {
   } catch {
     return 0;
   }
+}
+
+// Read + parse a jira metadata.json reusing the shared mtime cache (same `jira:`
+// key listJiras writes, so entries are shared — no redundant re-reads per request).
+async function readJsonCached(file) {
+  const mtimeMs = await statMtime(file);
+  const key = `jira:${file}`;
+  const hit = cache.get(key);
+  if (hit && hit.mtimeMs === mtimeMs) return hit.value;
+  const value = await readJsonSafe(file);
+  cache.set(key, { mtimeMs, value });
+  return value;
 }
 
 async function isDir(p) {
@@ -306,6 +318,94 @@ export async function getSystemDetail(repo, quarter = null) {
     impactCounts,
     quarter: quarter || null,
     jiras,
+  };
+}
+
+// ---- Contribution Hub: owners, PRs and an activity timeline for one AMP -------
+// progress_log entries are highly heterogeneous across the corpus; normalize each
+// to { timestamp, stage, agent, text, status } regardless of the source spelling.
+const LOG_TS_KEYS = ['timestamp', 'date', 'completed_at', 'started_at'];
+const LOG_TEXT_KEYS = ['entry', 'message', 'notes', 'note', 'summary', 'details', 'detail', 'event', 'action'];
+
+function normalizeLogEntry(e, jiraId) {
+  if (typeof e === 'string') {
+    // Some logs are pipe-delimited strings: "<ts> | <stage> | <agent> | <text>".
+    const p = e.split('|').map((x) => x.trim());
+    if (p.length >= 4) {
+      return { jiraId, timestamp: p[0] || null, stage: p[1] || null, agent: p[2] || null, status: null, text: p.slice(3).join(' | ') };
+    }
+    return { jiraId, timestamp: /^\d{4}-\d{2}-\d{2}/.test(e) ? e.slice(0, 10) : null, stage: null, agent: null, status: null, text: e };
+  }
+  if (!e || typeof e !== 'object') return null;
+  let timestamp = null;
+  for (const k of LOG_TS_KEYS) {
+    if (e[k]) { timestamp = e[k]; break; }
+  }
+  let text = null;
+  for (const k of LOG_TEXT_KEYS) {
+    if (e[k]) { text = typeof e[k] === 'string' ? e[k] : JSON.stringify(e[k]); break; }
+  }
+  return {
+    jiraId,
+    timestamp,
+    stage: e.stage ?? e.stage_name ?? null,
+    agent: e.agent || e.actor || null,
+    status: e.status || e.result || null,
+    text: text || '(no detail)',
+  };
+}
+
+/** Aggregate contribution signals (owners, PRs, progress_log) for one initiative. */
+export async function getContribution(id) {
+  const dir = await resolveInitiativeDir(id);
+  if (!dir) return null;
+  const jirasDir = path.join(dir.absPath, 'jiras');
+  const timeline = [];
+  const contributors = new Map();
+  const prs = [];
+  let jiraCount = 0;
+  if (await isDir(jirasDir)) {
+    let entries = [];
+    try {
+      entries = await fsp.readdir(jirasDir, { withFileTypes: true });
+    } catch {
+      entries = [];
+    }
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name.startsWith('.')) continue;
+      const metaFile = path.join(jirasDir, e.name, 'metadata.json');
+      if (!fs.existsSync(metaFile)) continue;
+      const meta = await readJsonCached(metaFile);
+      if (!meta) continue;
+      jiraCount += 1;
+      const jiraId = meta.jira_key || e.name;
+      // Owner falls back to assignee (mirrors normalizeJira); dedupe trivially-
+      // equivalent spellings (case / dot / dash), keeping the first-seen display form.
+      const owner = meta.owner || meta.assignee;
+      if (owner && owner !== 'Unassigned') {
+        const ownerKey = String(owner).trim().toLowerCase().replace(/[\s._-]+/g, '');
+        const cur = contributors.get(ownerKey) || { name: owner, jiraCount: 0 };
+        cur.jiraCount += 1;
+        contributors.set(ownerKey, cur);
+      }
+      const di = meta.deployment_info || {};
+      for (const u of normalizePrUrls(meta.pr_url, meta.pr_urls)) {
+        prs.push({ jiraId, url: u, mergedAt: di.merged_at || null });
+      }
+      if (Array.isArray(meta.progress_log)) {
+        for (const le of meta.progress_log) {
+          const n = normalizeLogEntry(le, jiraId);
+          if (n) timeline.push(n);
+        }
+      }
+    }
+  }
+  timeline.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+  return {
+    summary: { jiraCount, contributorCount: contributors.size, prCount: prs.length, activityCount: timeline.length },
+    contributors: [...contributors.values()].sort((a, b) => b.jiraCount - a.jiraCount),
+    prs,
+    timeline: timeline.slice(0, 200),
   };
 }
 

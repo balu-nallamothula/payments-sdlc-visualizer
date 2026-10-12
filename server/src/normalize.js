@@ -298,6 +298,28 @@ export function normalizeInitiative({ id, relPath, meta, jiraDirCount = 0 }) {
 }
 
 /**
+ * Coerce the various pr_url / pr_urls spellings (string | array | {url|href} |
+ * null) into a flat, deduped string[]. Real metadata has pr_url as a string, an
+ * array of strings, an object, or null — so anything non-string is resolved or
+ * dropped (never passed through, which would break `.replace`-style consumers).
+ */
+export function normalizePrUrls(prUrl, prUrls) {
+  const toUrls = (u) => {
+    if (typeof u === 'string') return [u];
+    if (u && typeof u === 'object') {
+      const direct = u.url || u.pr_url || u.href || u.link;
+      if (typeof direct === 'string') return [direct];
+      // A {repo: url} map — recover its string values (don't drop the PRs).
+      return Object.values(u).filter((v) => typeof v === 'string');
+    }
+    return [];
+  };
+  const list = (v) => (Array.isArray(v) ? v : v != null ? [v] : []);
+  const raw = [...list(prUrl), ...list(prUrls)];
+  return [...new Set(raw.flatMap(toUrls).filter((u) => typeof u === 'string' && u))];
+}
+
+/**
  * Lift the stage-9 gate outcomes ({security,test,performance,sre,local_integration,
  * supergraph_composition}) from the raw stages object. They live on the entry that
  * maps to canonical stage 9 (key "9", "9a", ...), so buildStageCells drops them —
@@ -321,13 +343,8 @@ export function normalizeJira({ id, relPath, meta }) {
   const done = stages.filter((c) => c.status === 'done' || c.status === 'skipped').length;
   const blocking = normalizeBlocking(m.blocking_conditions);
   const gateResults = extractGateResults(m.stages);
-  // Merge the two PR-url spellings (pr_url + the files using pr_urls), deduped.
-  const prUrl = [
-    ...new Set([
-      ...(Array.isArray(m.pr_url) ? m.pr_url : m.pr_url ? [m.pr_url] : []),
-      ...(Array.isArray(m.pr_urls) ? m.pr_urls : m.pr_urls ? [m.pr_urls] : []),
-    ]),
-  ].filter(Boolean);
+  // Merge the two PR-url spellings (pr_url + pr_urls), coerced to strings + deduped.
+  const prUrl = normalizePrUrls(m.pr_url, m.pr_urls);
 
   return {
     id: m.jira_key || id,

@@ -27,6 +27,7 @@ export const apiClient = {
         raw ? '?raw=1' : ''
       }`,
     ),
+  contribution: (id) => get(`/api/initiatives/${encodeURIComponent(id)}/contribution`),
   systems: () => get('/api/systems'),
   system: (repo, quarter) =>
     get(`/api/systems/${encodeURIComponent(repo)}${quarter ? `?quarter=${encodeURIComponent(quarter)}` : ''}`),
