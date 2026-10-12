@@ -5,3 +5,5 @@ dist/
 .DS_Store
 web/dist/
 server/.cache/
+dist-drop/
+sdlc-visualizer-drop.zip
