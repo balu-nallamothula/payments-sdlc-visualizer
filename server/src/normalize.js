@@ -117,7 +117,7 @@ export function normalizeRepos(raw) {
       if (r && typeof r === 'object') {
         return {
           name: r.name || null,
-          organization: r.organization || null,
+          organization: r.organization || r.org || null,
           url: r.url || null,
           path: r.path || null,
           branch: r.branch || null,
@@ -297,6 +297,22 @@ export function normalizeInitiative({ id, relPath, meta, jiraDirCount = 0 }) {
   };
 }
 
+/**
+ * Lift the stage-9 gate outcomes ({security,test,performance,sre,local_integration,
+ * supergraph_composition}) from the raw stages object. They live on the entry that
+ * maps to canonical stage 9 (key "9", "9a", ...), so buildStageCells drops them —
+ * the Quality Evidence / Readiness tabs need them typed.
+ */
+function extractGateResults(rawStages) {
+  if (!rawStages || typeof rawStages !== 'object') return null;
+  for (const [key, val] of Object.entries(rawStages)) {
+    if (val && typeof val === 'object' && val.gate_results && normalizeStageKey(key, val) === 9) {
+      return val.gate_results;
+    }
+  }
+  return null;
+}
+
 /** Normalize a single Jira's metadata (per-jira phase, stages 5-12). */
 export function normalizeJira({ id, relPath, meta }) {
   const m = meta || {};
@@ -304,6 +320,14 @@ export function normalizeJira({ id, relPath, meta }) {
   const stages = buildStageCells(m.stages, PER_JIRA_STAGE_NUMBERS, currentStageN);
   const done = stages.filter((c) => c.status === 'done' || c.status === 'skipped').length;
   const blocking = normalizeBlocking(m.blocking_conditions);
+  const gateResults = extractGateResults(m.stages);
+  // Merge the two PR-url spellings (pr_url + the files using pr_urls), deduped.
+  const prUrl = [
+    ...new Set([
+      ...(Array.isArray(m.pr_url) ? m.pr_url : m.pr_url ? [m.pr_url] : []),
+      ...(Array.isArray(m.pr_urls) ? m.pr_urls : m.pr_urls ? [m.pr_urls] : []),
+    ]),
+  ].filter(Boolean);
 
   return {
     id: m.jira_key || id,
@@ -312,17 +336,24 @@ export function normalizeJira({ id, relPath, meta }) {
     url: m.jira_url || m.url || null,
     epic: m.epic || m.epic_id || null,
     impactLevel: m.impact_level || null,
-    storyPoints: m.story_points ?? null,
+    storyPoints: m.story_points ?? m.sp ?? null,
     status: m.status || m.lifecycle_status || null,
     lifecycleStatus: m.lifecycle_status || null,
     owner: m.owner || m.assignee || null,
     labels: Array.isArray(m.labels) ? m.labels : [],
     activatedAt: m.activated_at || null,
     currentStageN,
-    prUrl: Array.isArray(m.pr_url) ? m.pr_url : m.pr_url ? [m.pr_url] : [],
+    prUrl,
     branchName: m.branch_name || null,
     docsBranch: m.docs_branch || null,
     targetRepositories: normalizeRepos(m.target_repositories),
+    component: m.component || null,
+    platform: m.platform || null,
+    parallelizationGroup: m.parallelization_group || null,
+    createdTimestamp: m.created_timestamp || m.created_at || null,
+    deploymentInfo: m.deployment_info || null,
+    qualityResults: m.quality_results ?? null,
+    gateResults,
     blocks: Array.isArray(m.blocks) ? m.blocks : [],
     blockedBy: Array.isArray(m.blocked_by) ? m.blocked_by : [],
     blocking,
