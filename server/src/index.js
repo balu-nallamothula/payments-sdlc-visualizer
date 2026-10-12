@@ -82,13 +82,23 @@ app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use('/api', api);
 
-// Serve the built frontend in production, if present.
+// Serve the built frontend in production, if present. The built index.html ships
+// with NO <base> tag; when mounted under a sub-path we inject an absolute
+// <base href="${BASE_PATH}/"> here, at serve time, so the SPA's relative asset/
+// API/WS URLs and the router basename all resolve inside the mount — at any route
+// depth. Standalone (BASE_PATH empty) needs none: assets resolve against "/".
 const webDist = path.resolve(__dirname, '..', '..', 'web', 'dist');
 if (fs.existsSync(webDist)) {
-  app.use(express.static(webDist));
+  const rawIndex = fs.readFileSync(path.join(webDist, 'index.html'), 'utf8');
+  const indexHtml = BASE_PATH
+    ? rawIndex.replace('<head>', `<head>\n    <base href="${BASE_PATH}/" />`)
+    : rawIndex;
+  // index:false so "/" falls through to the handler below (serving the
+  // base-injected HTML) instead of express.static returning the raw file.
+  app.use(express.static(webDist, { index: false }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(webDist, 'index.html'));
+    res.type('html').send(indexHtml);
   });
 }
 
