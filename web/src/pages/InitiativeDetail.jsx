@@ -20,6 +20,8 @@ import { ImpactAssessment } from '../components/ImpactAssessment';
 import { ReadinessScore } from '../components/ReadinessScore';
 import { ContributionHub } from '../components/ContributionHub';
 import { QualityEvidence } from '../components/QualityEvidence';
+import { ArchitectureView } from '../components/ArchitectureView';
+import { GuardrailsPanel } from '../components/GuardrailsPanel';
 
 // Jira issue-key shape (e.g. PAY-6883); filters out placeholder epic refs.
 const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
@@ -139,7 +141,7 @@ export function InitiativeDetailPage({ name: nameProp }) {
   if (!detail) return <div className="spinner">Loading initiative…</div>;
 
   const { initiative, pipeline, jiras } = detail;
-  const tabs = buildTabs({ detail });
+  const tabs = buildTabs({ detail, artifacts });
   // Fall back to Overview if the URL points at a tab that's disabled for this
   // initiative (e.g. ?tab=impact on an AMP with no impact scored).
   const shownTab = tabs.some((t) => t.id === activeTab && !t.disabled) ? activeTab : 'overview';
@@ -302,7 +304,9 @@ export function InitiativeDetailPage({ name: nameProp }) {
         {shownTab === 'impacted-systems' && <ImpactedSystems jiras={jiras} />}
         {shownTab === 'impact' && <ImpactAssessment jiras={jiras} />}
         {shownTab === 'contribution' && <ContributionHub initiativeId={name} />}
+        {shownTab === 'architecture' && <ArchitectureView artifacts={artifacts} repoCtx={repoCtx} />}
         {shownTab === 'evidence' && <QualityEvidence jiras={jiras} initiativeId={name} />}
+        {shownTab === 'guardrails' && <GuardrailsPanel jiras={jiras} />}
         {shownTab === 'readiness' && <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} />}
       </div>
 

@@ -9,10 +9,16 @@
 // (Impacted Systems, Impact, Readiness, Contribution, Evidence, Architecture,
 // Guardrails, PR Review, FlowGuard) slot in as each phase lands.
 import { rowGates } from './gates';
+import { artifactsForStage } from './artifacts';
 
 const TAB_REGISTRY = [
   { id: 'overview', label: 'Overview' },
   { id: 'pipeline', label: 'AI SDLC Stages' },
+  {
+    id: 'contribution',
+    label: 'Contribution',
+    hasData: ({ detail }) => detail.jiras.length > 0,
+  },
   {
     id: 'impacted-systems',
     label: 'Impacted Systems',
@@ -24,9 +30,10 @@ const TAB_REGISTRY = [
     hasData: ({ detail }) => detail.jiras.some((j) => j.impactLevel),
   },
   {
-    id: 'contribution',
-    label: 'Contribution',
-    hasData: ({ detail }) => detail.jiras.length > 0,
+    id: 'architecture',
+    label: 'Architecture',
+    // Reuse the view's own stage-3 selector so enable ↔ render stay in sync.
+    hasData: ({ artifacts }) => artifactsForStage(artifacts || [], 3).some((a) => a.ext === '.md'),
   },
   {
     id: 'evidence',
@@ -34,6 +41,11 @@ const TAB_REGISTRY = [
     // Enabled only when at least one jira produces a renderable gate row (keeps
     // enable ↔ render in sync — rowGates is exactly what the tab renders).
     hasData: ({ detail }) => detail.jiras.some((j) => rowGates(j)),
+  },
+  {
+    id: 'guardrails',
+    label: 'Guardrails',
+    hasData: ({ detail }) => detail.jiras.length > 0,
   },
   { id: 'readiness', label: 'Readiness' },
 ];
