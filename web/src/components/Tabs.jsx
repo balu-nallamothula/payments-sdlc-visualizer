@@ -22,7 +22,7 @@ export function Tabs({ tabs, active, onSelect }) {
               cursor: t.disabled ? 'not-allowed' : 'pointer',
             }}
             disabled={t.disabled}
-            title={t.disabled ? 'Coming soon' : undefined}
+            title={t.disabled ? t.title || 'Not available for this initiative' : undefined}
             onClick={() => !t.disabled && onSelect(t.id)}
           >
             {t.label}

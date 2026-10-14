@@ -22,6 +22,7 @@ import { ContributionHub } from '../components/ContributionHub';
 import { QualityEvidence } from '../components/QualityEvidence';
 import { ArchitectureView } from '../components/ArchitectureView';
 import { GuardrailsPanel } from '../components/GuardrailsPanel';
+import { PrReview } from '../components/PrReview';
 
 // Jira issue-key shape (e.g. PAY-6883); filters out placeholder epic refs.
 const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
@@ -307,6 +308,7 @@ export function InitiativeDetailPage({ name: nameProp }) {
         {shownTab === 'architecture' && <ArchitectureView artifacts={artifacts} repoCtx={repoCtx} />}
         {shownTab === 'evidence' && <QualityEvidence jiras={jiras} initiativeId={name} />}
         {shownTab === 'guardrails' && <GuardrailsPanel jiras={jiras} />}
+        {shownTab === 'pr-review' && <PrReview jiras={jiras} initiativeId={name} />}
         {shownTab === 'readiness' && <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} />}
       </div>
 

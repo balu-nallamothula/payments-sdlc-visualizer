@@ -47,6 +47,19 @@ const TAB_REGISTRY = [
     label: 'Guardrails',
     hasData: ({ detail }) => detail.jiras.length > 0,
   },
+  {
+    id: 'pr-review',
+    label: 'PR Review',
+    hasData: ({ detail }) =>
+      detail.jiras.some((j) => (j.prUrl || []).length > 0 || j.deploymentInfo?.pr_url || j.deploymentInfo?.pr_number),
+  },
+  {
+    // External system — not integrated yet; always a disabled "coming soon" tab.
+    id: 'flowguard',
+    label: 'FlowGuard',
+    hasData: () => false,
+    disabledTitle: 'Coming soon — FlowGuard is not integrated yet',
+  },
   { id: 'readiness', label: 'Readiness' },
 ];
 
@@ -56,5 +69,6 @@ export function buildTabs(ctx) {
     label: t.label,
     count: t.count ? t.count(ctx) : undefined,
     disabled: t.hasData ? !t.hasData(ctx) : false,
+    title: t.disabledTitle,
   }));
 }
