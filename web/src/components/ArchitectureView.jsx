@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '../api/client';
-import { artifactsForStage } from '../lib/artifacts';
+import { artifactsForStage, ARCH_EXTS } from '../lib/artifacts';
 import { Markdown } from './Markdown';
 import { EmptyTab } from './EmptyTab';
 
@@ -17,7 +17,7 @@ const LABELS = { target: 'Target state', current: 'Current state', other: 'Revie
 // as Markdown with Mermaid diagrams. Source: stage-3 (03-architecture) artifacts.
 export function ArchitectureView({ artifacts, repoCtx }) {
   const archDocs = useMemo(
-    () => artifactsForStage(artifacts || [], 3).filter((a) => a.ext === '.md'),
+    () => artifactsForStage(artifacts || [], 3).filter((a) => ARCH_EXTS.includes(a.ext)),
     [artifacts],
   );
   const groups = useMemo(() => {
@@ -44,19 +44,19 @@ export function ArchitectureView({ artifacts, repoCtx }) {
     setSelected((cur) => (list.some((a) => a.relPath === cur) ? cur : def ? def.relPath : null));
   }, [view, groups]);
 
-  const [content, setContent] = useState(null);
+  const [doc, setDoc] = useState(null);
   const [err, setErr] = useState(null);
   useEffect(() => {
     if (!selected) {
-      setContent(null);
+      setDoc(null);
       return undefined;
     }
     let live = true;
-    setContent(null);
+    setDoc(null);
     setErr(null);
     apiClient
       .artifact(selected)
-      .then((a) => live && setContent(a.content))
+      .then((a) => live && setDoc({ content: a.content, ext: a.ext }))
       .catch((e) => live && setErr(e.message));
     return () => {
       live = false;
@@ -102,8 +102,16 @@ export function ArchitectureView({ artifacts, repoCtx }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {err && <div className="muted">Could not load: {err}</div>}
-          {selected && content === null && !err && <div className="spinner">Loading…</div>}
-          {content !== null && !err && <Markdown repoCtx={repoCtx}>{content}</Markdown>}
+          {selected && doc === null && !err && <div className="spinner">Loading…</div>}
+          {doc !== null &&
+            !err &&
+            (doc.ext === '.md' ? (
+              <Markdown repoCtx={repoCtx}>{doc.content}</Markdown>
+            ) : (
+              <pre className="md">
+                <code>{doc.content}</code>
+              </pre>
+            ))}
         </div>
       </div>
     </div>

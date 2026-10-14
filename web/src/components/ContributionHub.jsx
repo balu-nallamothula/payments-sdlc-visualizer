@@ -28,21 +28,11 @@ const avatarStyle = {
   flex: '0 0 auto',
 };
 
-function Stat({ label, value }) {
-  return (
-    <div>
-      <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
-      <div className="muted" style={{ fontSize: 12 }}>{label}</div>
-    </div>
-  );
-}
-
-// Contribution Hub: owners, pull-request roll-up and an activity timeline for one
-// initiative. Data from /api/initiatives/:name/contribution (server aggregates the
-// per-jira owner / pr_url / progress_log). Contributors are derived (there is no
-// structured contributors field) — owners + PRs are authoritative, the timeline is
-// the pipeline's own progress_log.
-export function ContributionHub({ initiativeId }) {
+// Contribution Hub: a single Contribution Summary (feature → AMP → repos →
+// contributors → PRs → stories) plus owners, a PR roll-up and the pipeline's
+// activity timeline. Summary fields come from the normalized jiras; owners/PRs/
+// timeline from /api/initiatives/:name/contribution (server aggregates progress_log).
+export function ContributionHub({ initiativeId, initiativeName, jiras = [] }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -58,15 +48,34 @@ export function ContributionHub({ initiativeId }) {
   const { summary, contributors, prs, timeline } = data;
   if (!summary.jiraCount) return <EmptyTab reason="No contribution activity yet — this initiative has no Jiras." />;
 
+  const repos = [...new Set(jiras.flatMap((j) => (j.targetRepositories || []).map((r) => r.name).filter(Boolean)))];
+  const epics = [...new Set(jiras.map((j) => j.epic).filter(Boolean))];
+  const reposLabel = repos.length
+    ? `${repos.length} — ${repos.slice(0, 6).join(', ')}${repos.length > 6 ? ` +${repos.length - 6} more` : ''}`
+    : '—';
+  const contribLabel = contributors.length
+    ? `${summary.contributorCount} — ${contributors.slice(0, 4).map((c) => displayName(c.name)).join(', ')}${contributors.length > 4 ? '…' : ''}`
+    : String(summary.contributorCount);
+
   return (
     <div>
       <div className="card" style={{ marginBottom: 18 }}>
-        <h2>Contribution</h2>
-        <div className="row wrap" style={{ gap: 28 }}>
-          <Stat label="Jiras" value={summary.jiraCount} />
-          <Stat label="Owners" value={summary.contributorCount} />
-          <Stat label="Pull requests" value={summary.prCount} />
-          <Stat label="Activity events" value={summary.activityCount} />
+        <h2>Contribution summary</h2>
+        <div className="kv">
+          <div className="k">Feature</div>
+          <div className="v">{initiativeName || initiativeId}</div>
+          <div className="k">AMP</div>
+          <div className="v mono">{epics.length ? epics.join(', ') : initiativeId}</div>
+          <div className="k">Repositories impacted</div>
+          <div className="v">{reposLabel}</div>
+          <div className="k">Contributors</div>
+          <div className="v">{contribLabel}</div>
+          <div className="k">Pull requests</div>
+          <div className="v">{summary.prCount}</div>
+          <div className="k">Jira stories</div>
+          <div className="v">{summary.jiraCount}</div>
+          <div className="k">Activity events</div>
+          <div className="v">{summary.activityCount}</div>
         </div>
       </div>
 

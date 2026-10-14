@@ -303,13 +303,17 @@ export function InitiativeDetailPage({ name: nameProp }) {
         )}
 
         {shownTab === 'impacted-systems' && <ImpactedSystems jiras={jiras} />}
-        {shownTab === 'impact' && <ImpactAssessment jiras={jiras} />}
-        {shownTab === 'contribution' && <ContributionHub initiativeId={name} />}
+        {shownTab === 'impact' && <ImpactAssessment jiras={jiras} initiativeName={initiative.initiativeName} />}
+        {shownTab === 'contribution' && (
+          <ContributionHub initiativeId={name} initiativeName={initiative.initiativeName} jiras={jiras} />
+        )}
         {shownTab === 'architecture' && <ArchitectureView artifacts={artifacts} repoCtx={repoCtx} />}
         {shownTab === 'evidence' && <QualityEvidence jiras={jiras} initiativeId={name} />}
         {shownTab === 'guardrails' && <GuardrailsPanel jiras={jiras} />}
         {shownTab === 'pr-review' && <PrReview jiras={jiras} initiativeId={name} />}
-        {shownTab === 'readiness' && <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} />}
+        {shownTab === 'readiness' && (
+          <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} artifacts={artifacts} />
+        )}
       </div>
 
       {openArtifact && <ArtifactViewer path={openArtifact} repoCtx={repoCtx} onClose={() => setOpenArtifact(null)} />}
