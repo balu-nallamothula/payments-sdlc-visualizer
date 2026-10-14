@@ -8,7 +8,9 @@ import path from 'node:path';
 import { config } from '../config.js';
 import { resolveInitiativeDir } from './scanner.js';
 
-const ALLOWED_EXT = new Set(['.md', '.json', '.txt', '.yaml', '.yml', '.html']);
+// .diff/.patch so architecture target-state deltas are viewable (the viewer
+// renders unknown types as <pre>). Read-only + sandboxed, so widening is safe.
+const ALLOWED_EXT = new Set(['.md', '.json', '.txt', '.yaml', '.yml', '.html', '.diff', '.patch']);
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const MAX_LIST = 500;
 
@@ -169,6 +171,9 @@ export async function listArtifacts(initiativeId, jiraId = null) {
       if (e.name.startsWith('.')) continue;
       const abs = path.join(current, e.name);
       if (e.isDirectory()) {
+        // telemetry/ holds pipeline-internal run logs — never a user or
+        // visualizer artifact, so hide it at any depth.
+        if (e.name === 'telemetry') continue;
         if (current === base && skipDirs.has(e.name)) continue;
         await walk(abs, depth + 1);
       } else if (e.isFile()) {

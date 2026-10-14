@@ -457,7 +457,7 @@ textarea {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 0;
-  padding: 18px 20px;
+  padding: 22px 24px;
   box-shadow: var(--shadow);
 }
 .card > h2 {
@@ -514,6 +514,41 @@ textarea {
   background: var(--active-soft);
   color: var(--active);
   border-color: transparent;
+}
+/* Prominent status pill (e.g. "In Progress") — solid fill for extra weight. */
+.badge.badge-status {
+  font-weight: 700;
+  border-color: transparent;
+}
+.badge.badge-status.active {
+  background: var(--active);
+  color: #fff;
+}
+.badge.badge-status.ok {
+  background: var(--ok);
+  color: #fff;
+}
+/* Impact — deliberately light (a small severity dot + muted text). */
+.impact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.impact-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: 0 0 auto;
+}
+.impact-chip.impact-medium .dot {
+  background: var(--warn);
+}
+.impact-chip.impact-high .dot,
+.impact-chip.impact-critical .dot {
+  background: var(--crit);
 }
 
 /* ---------------- Buttons ---------------- */
@@ -611,7 +646,7 @@ hr {
 /* ---------------- Current-stage hero ---------------- */
 .hero {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   gap: 22px;
   align-items: center;
   background: var(--panel);
@@ -632,16 +667,6 @@ hr {
   color: #fff;
   box-shadow: 0 12px 26px rgba(160, 92, 220, 0.42);
 }
-.hero .focus .fi {
-  width: 42px;
-  height: 42px;
-  border-radius: 0;
-  background: var(--accent-soft);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
 .hero .label {
   color: var(--accent);
   font-size: 12px;
@@ -658,13 +683,6 @@ hr {
 .hero .sub {
   color: var(--muted);
   font-size: 13px;
-}
-.hero .focus {
-  border-left: 1px solid var(--border);
-  padding-left: 22px;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
 }
 .hero .meta {
   display: flex;
@@ -876,14 +894,20 @@ hr {
 /* ---------------- Mini pipeline strip ---------------- */
 .pipeline {
   display: flex;
-  gap: 3px;
+  gap: 1px;
   width: 100%;
 }
 .pipeline .cell {
   flex: 1;
-  height: 8px;
+  height: 10px;
   border-radius: 0;
   background: var(--panel-3);
+}
+.pipeline .cell:first-child {
+  border-radius: 3px 0 0 3px;
+}
+.pipeline .cell:last-child {
+  border-radius: 0 3px 3px 0;
 }
 .pipeline .cell.done {
   background: var(--ok);
@@ -1326,11 +1350,76 @@ tbody tr:hover {
   border-radius: 0;
   color: var(--text);
   padding: 10px 12px;
+  font: inherit;
   font-size: 13px;
+  line-height: 1.5;
   outline: none;
+  resize: none;
+  min-height: 40px;
+  max-height: 160px;
+  overflow-y: auto;
 }
 .chat-input:focus {
   border-color: var(--accent);
+}
+/* Image attachments (paste/upload) — composer previews */
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+.chat-attachment {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+}
+.chat-attachment img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.chat-attachment-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chat-attachment-remove:hover {
+  color: var(--crit);
+  border-color: var(--crit);
+}
+/* Image attachments rendered inside a sent message */
+.chat-msg-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.chat-msg-images img {
+  max-width: 240px;
+  max-height: 240px;
+  border: 1px solid var(--border);
+  display: block;
+}
+.chat-msg-image-placeholder {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 8px;
+  border: 1px dashed var(--border);
 }
 /* Copy-on-hover for chat bubbles */
 .copy-btn {
@@ -1458,6 +1547,32 @@ tbody tr:hover {
 }
 
 /* Tool-call rendering in chat */
+/* Plain-language "story" line for Skill / agent tool calls (non-dev view). */
+.tool-story {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 13px;
+}
+.tool-story-icon {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.tool-story-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.tool-story-detail {
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tool {
   margin: 6px 0;
   border: 1px solid var(--border);
@@ -1532,6 +1647,75 @@ tbody tr:hover {
   outline: none;
 }
 .artifact-editor:focus {
+  border-color: var(--accent);
+}
+
+/* Markdown editor (toolbar + source + preview) */
+.md-editor {
+  display: flex;
+  flex-direction: column;
+}
+.md-editor-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.md-editor-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+}
+.md-tab {
+  background: var(--panel-2);
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.md-tab + .md-tab {
+  border-left: 1px solid var(--border);
+}
+.md-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.md-tool {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.md-tool:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.md-editor-preview {
+  min-height: 55vh;
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px 16px;
+}
+/* Editable preview (contenteditable) — show the caret, no focus ring. */
+.md-editable {
+  cursor: text;
+  outline: none;
+}
+.md-editable:focus {
   border-color: var(--accent);
 }
 
@@ -1708,4 +1892,547 @@ tbody tr:hover {
   font-size: 12.5px;
   padding: 2px 5px;
   outline: none;
+}
+
+/* App confirm dialog — in-app, themed replacement for window.confirm.
+   Sits above the chat dock (z 50) and the artifact modal (z 40/41). */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 14, 40, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+.confirm-card {
+  width: min(440px, 96vw);
+  box-shadow: var(--shadow-lg);
+}
+.confirm-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.confirm-message {
+  margin: 0 0 20px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.confirm-details {
+  margin: 0 0 16px;
+  padding: 8px 10px;
+  list-style: none;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.confirm-details li {
+  white-space: normal;
+  word-break: break-all;
+  padding: 1px 0;
+}
+.confirm-warning {
+  margin: 0 0 20px;
+  color: var(--crit);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn.danger {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: #fff;
+}
+
+/* Branch switcher (sephora-project-docs) — filterable combobox. */
+.branch-combo {
+  position: relative;
+  display: inline-flex;
+}
+.branch-combo-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  max-width: 240px;
+  cursor: pointer;
+  outline: none;
+}
+.branch-combo-trigger:hover {
+  border-color: var(--border-strong);
+}
+.branch-combo-trigger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.branch-combo-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-combo-caret {
+  color: var(--muted);
+  margin-left: auto;
+}
+.branch-combo-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 45;
+  width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+}
+.branch-combo-input {
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  outline: none;
+}
+.branch-combo-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 280px;
+  overflow: auto;
+}
+.branch-combo-opt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.branch-combo-opt.is-active {
+  background: var(--panel-3);
+}
+.branch-combo-opt.is-current {
+  color: var(--accent);
+  font-weight: 600;
+}
+.branch-combo-tick {
+  display: inline-flex;
+  width: 14px;
+  flex: 0 0 14px;
+  color: var(--accent);
+}
+.branch-combo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-combo-empty {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.branch-combo-group {
+  padding: 6px 8px 2px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Jira detail header — an accent-tinted banner so it clearly reads as a ticket,
+   distinct from the plain initiative header. */
+.jira-banner {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--panel));
+  padding: 22px 26px 24px;
+  margin-bottom: 18px;
+}
+.jira-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.jira-crumbs a {
+  color: var(--muted);
+}
+.jira-crumbs a:hover {
+  color: var(--text);
+}
+.jira-crumbs .sep {
+  color: var(--border-strong);
+}
+.jira-crumbs-key {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.jira-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.jira-live {
+  padding: 1px 6px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+/* Shown on a ticket when the live Jira fetch fails (bad/expired PAT). */
+.live-warning {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+  border-left-width: 3px;
+  font-size: 13px;
+  color: var(--text);
+}
+.live-warning a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Stage hero inside a Jira ticket — visually distinct from the initiative hero. */
+.hero.is-jira {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+.hero.is-jira .icon {
+  background: linear-gradient(140deg, #3aa0ff 0%, #7c5cf0 100%);
+  box-shadow: 0 12px 26px rgba(60, 120, 240, 0.4);
+}
+
+/* Jira "Details" key/value grid. */
+.jira-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 22px;
+}
+.jira-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.jira-details .full {
+  grid-column: 1 / -1;
+}
+.jira-details .k {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.jira-details .v {
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* Jira "Development" card. */
+.dev-repo {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dev-repo:first-child {
+  padding-top: 0;
+}
+.dev-repo:last-child {
+  border-bottom: none;
+}
+.dev-repo-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.dev-repo-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.dev-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dev-prs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.dev-blocks {
+  margin-top: 12px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Jira detail redesign — ticket-dashboard header, key/value cards, activity. */
+.jira-banner {
+  position: relative;
+}
+.jira-actions {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  display: flex;
+  gap: 8px;
+}
+.jira-head {
+  display: grid;
+  grid-template-columns: 1fr minmax(210px, 300px);
+  gap: 36px;
+  align-items: start;
+  margin-top: 18px;
+}
+.jira-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+.jira-key {
+  display: block;
+  width: fit-content;
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.jira-key:hover {
+  text-decoration: underline;
+}
+.jira-title {
+  font-size: 23px;
+  font-weight: 800;
+  margin: 8px 0 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.jira-status-note {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 620px;
+}
+.jira-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 18px 26px;
+  margin-top: 28px;
+}
+.jira-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.jira-meta .k,
+.jira-head-side .k {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.jira-meta .v {
+  font-size: 13px;
+  word-break: break-word;
+}
+.jira-assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.label-more {
+  align-self: center;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.label-more:hover {
+  text-decoration: underline;
+}
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.jira-head-side {
+  border-left: 1px solid var(--border);
+  padding-left: 28px;
+}
+.jira-progress-count {
+  font-size: 20px;
+  margin-top: 4px;
+}
+.jira-progress-count strong {
+  font-weight: 800;
+}
+.jira-progress-strip {
+  margin-top: 10px;
+}
+.jira-progress-pct {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: right;
+}
+.jira-current {
+  margin-top: 16px;
+}
+.jira-current .v {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shared key/value list for Details / Development cards. */
+.kv {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px 14px;
+  align-items: baseline;
+}
+.kv .k {
+  color: var(--muted);
+  font-size: 12px;
+}
+.kv .v {
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* Stage activity timeline. */
+.stage-activity {
+  display: flex;
+  flex-direction: column;
+}
+.sa-row {
+  display: grid;
+  grid-template-columns: 20px 28px minmax(130px, 1.3fr) auto 92px 64px minmax(0, 2fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 10px 6px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+.sa-row:first-child {
+  border-top: none;
+}
+.sa-row:hover,
+.sa-row.is-selected {
+  background: var(--panel-2);
+}
+.sa-status {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+}
+.sa-status.sa-done,
+.sa-status.sa-skipped {
+  background: var(--ok);
+}
+.sa-status.sa-active {
+  background: var(--warn);
+}
+.sa-status.sa-blocked {
+  background: var(--crit);
+}
+.sa-status.sa-pending {
+  background: transparent;
+  border: 1.5px dashed var(--border-strong);
+}
+.sa-n {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sa-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.sa-date,
+.sa-time {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sa-msg {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

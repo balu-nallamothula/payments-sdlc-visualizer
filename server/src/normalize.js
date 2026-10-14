@@ -117,10 +117,11 @@ export function normalizeRepos(raw) {
       if (r && typeof r === 'object') {
         return {
           name: r.name || null,
-          organization: r.organization || null,
+          organization: r.organization || r.org || null,
           url: r.url || null,
           path: r.path || null,
           branch: r.branch || null,
+          featureCommit: r.feature_commit || r.commit || null,
         };
       }
       return null;
@@ -242,6 +243,7 @@ export function buildStageCells(rawStages, phaseStageNumbers, currentStageN) {
         status: normalizeStatus(e.status),
         agent: e.agent || null,
         completedAt: e.completed_at || null,
+        result: e.result || null,
         optional: e.optional ?? null,
       })),
       convergence,
@@ -295,6 +297,44 @@ export function normalizeInitiative({ id, relPath, meta, jiraDirCount = 0 }) {
   };
 }
 
+/**
+ * Coerce the various pr_url / pr_urls spellings (string | array | {url|href} |
+ * null) into a flat, deduped string[]. Real metadata has pr_url as a string, an
+ * array of strings, an object, or null — so anything non-string is resolved or
+ * dropped (never passed through, which would break `.replace`-style consumers).
+ */
+export function normalizePrUrls(prUrl, prUrls) {
+  const toUrls = (u) => {
+    if (typeof u === 'string') return [u];
+    if (u && typeof u === 'object') {
+      const direct = u.url || u.pr_url || u.href || u.link;
+      if (typeof direct === 'string') return [direct];
+      // A {repo: url} map — recover its string values (don't drop the PRs).
+      return Object.values(u).filter((v) => typeof v === 'string');
+    }
+    return [];
+  };
+  const list = (v) => (Array.isArray(v) ? v : v != null ? [v] : []);
+  const raw = [...list(prUrl), ...list(prUrls)];
+  return [...new Set(raw.flatMap(toUrls).filter((u) => typeof u === 'string' && u))];
+}
+
+/**
+ * Lift the stage-9 gate outcomes ({security,test,performance,sre,local_integration,
+ * supergraph_composition}) from the raw stages object. They live on the entry that
+ * maps to canonical stage 9 (key "9", "9a", ...), so buildStageCells drops them —
+ * the Quality Evidence / Readiness tabs need them typed.
+ */
+function extractGateResults(rawStages) {
+  if (!rawStages || typeof rawStages !== 'object') return null;
+  for (const [key, val] of Object.entries(rawStages)) {
+    if (val && typeof val === 'object' && val.gate_results && normalizeStageKey(key, val) === 9) {
+      return val.gate_results;
+    }
+  }
+  return null;
+}
+
 /** Normalize a single Jira's metadata (per-jira phase, stages 5-12). */
 export function normalizeJira({ id, relPath, meta }) {
   const m = meta || {};
@@ -302,21 +342,35 @@ export function normalizeJira({ id, relPath, meta }) {
   const stages = buildStageCells(m.stages, PER_JIRA_STAGE_NUMBERS, currentStageN);
   const done = stages.filter((c) => c.status === 'done' || c.status === 'skipped').length;
   const blocking = normalizeBlocking(m.blocking_conditions);
+  const gateResults = extractGateResults(m.stages);
+  // Merge the two PR-url spellings (pr_url + pr_urls), coerced to strings + deduped.
+  const prUrl = normalizePrUrls(m.pr_url, m.pr_urls);
 
   return {
     id: m.jira_key || id,
     relPath,
     title: m.title || null,
+    url: m.jira_url || m.url || null,
     epic: m.epic || m.epic_id || null,
     impactLevel: m.impact_level || null,
-    storyPoints: m.story_points ?? null,
+    storyPoints: m.story_points ?? m.sp ?? null,
     status: m.status || m.lifecycle_status || null,
     lifecycleStatus: m.lifecycle_status || null,
+    owner: m.owner || m.assignee || null,
+    labels: Array.isArray(m.labels) ? m.labels : [],
+    activatedAt: m.activated_at || null,
     currentStageN,
-    prUrl: Array.isArray(m.pr_url) ? m.pr_url : m.pr_url ? [m.pr_url] : [],
+    prUrl,
     branchName: m.branch_name || null,
     docsBranch: m.docs_branch || null,
     targetRepositories: normalizeRepos(m.target_repositories),
+    component: m.component || null,
+    platform: m.platform || null,
+    parallelizationGroup: m.parallelization_group || null,
+    createdTimestamp: m.created_timestamp || m.created_at || null,
+    deploymentInfo: m.deployment_info || null,
+    qualityResults: m.quality_results ?? null,
+    gateResults,
     blocks: Array.isArray(m.blocks) ? m.blocks : [],
     blockedBy: Array.isArray(m.blocked_by) ? m.blocked_by : [],
     blocking,

@@ -1,5 +1,7 @@
+import { apiPath } from '../lib/basePath';
+
 async function get(url) {
-  const res = await fetch(url);
+  const res = await fetch(apiPath(url));
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try {
@@ -15,6 +17,7 @@ async function get(url) {
 
 export const apiClient = {
   health: () => get('/api/health'),
+  devplanConfig: () => get('/api/devplan/config'),
   initiatives: () => get('/api/initiatives'),
   initiative: (id, raw = false) =>
     get(`/api/initiatives/${encodeURIComponent(id)}${raw ? '?raw=1' : ''}`),
@@ -24,6 +27,10 @@ export const apiClient = {
         raw ? '?raw=1' : ''
       }`,
     ),
+  contribution: (id) => get(`/api/initiatives/${encodeURIComponent(id)}/contribution`),
+  systems: () => get('/api/systems'),
+  system: (repo, quarter) =>
+    get(`/api/systems/${encodeURIComponent(repo)}${quarter ? `?quarter=${encodeURIComponent(quarter)}` : ''}`),
   stages: () => get('/api/stages'),
   stage: (n) => get(`/api/stages/${n}`),
   reference: (doc) => get(`/api/reference/${doc}`),
@@ -35,7 +42,7 @@ export const apiClient = {
     ),
   artifact: (path) => get(`/api/artifact?path=${encodeURIComponent(path)}`),
   saveArtifact: async (path, content) => {
-    const res = await fetch('/api/artifact', {
+    const res = await fetch(apiPath('/api/artifact'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path, content }),
@@ -53,8 +60,29 @@ export const apiClient = {
     return res.json();
   },
   gitStatus: () => get('/api/git/status'),
+  gitBranches: () => get('/api/git/branches'),
+  gitCheckout: async (branch, { force = false } = {}) => {
+    const res = await fetch(apiPath('/api/git/checkout'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branch, force }),
+    });
+    if (!res.ok) {
+      let msg = `${res.status} ${res.statusText}`;
+      try {
+        const body = await res.json();
+        if (body?.error) msg = body.error;
+      } catch {
+        /* ignore */
+      }
+      const err = new Error(msg);
+      err.status = res.status; // 409 = blocked by uncommitted changes
+      throw err;
+    }
+    return res.json();
+  },
   suggestCommitMessage: async () => {
-    const res = await fetch('/api/git/suggest-message', { method: 'POST' });
+    const res = await fetch(apiPath('/api/git/suggest-message'), { method: 'POST' });
     if (!res.ok) {
       let msg = `${res.status} ${res.statusText}`;
       try {
@@ -68,7 +96,7 @@ export const apiClient = {
     return res.json();
   },
   gitCommit: async (message, paths) => {
-    const res = await fetch('/api/git/commit', {
+    const res = await fetch(apiPath('/api/git/commit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, paths }),

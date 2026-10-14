@@ -107,7 +107,7 @@ export function GitChanges() {
                 />
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <button className="btn sm" onClick={suggest} disabled={suggesting}>
-                    {suggesting ? 'Asking Claude…' : '✨ Ask Claude'}
+                    {suggesting ? 'Writing message…' : '✨ Create commit message with Claude'}
                   </button>
                   <button className="btn primary" onClick={commit} disabled={committing || !message.trim()}>
                     {committing ? 'Committing…' : `Commit ${count} file${count === 1 ? '' : 's'}`}

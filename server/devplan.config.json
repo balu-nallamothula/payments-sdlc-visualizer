@@ -1,0 +1,33 @@
+{
+  "jira": {
+    "base": "https://jira.sephora.com",
+    "browseBase": "https://jira.sephora.com/browse",
+    "storyPointsField": "customfield_10173",
+    "sprintField": "customfield_10510",
+    "epicLinkJql": "\"Epic Link\"",
+    "sprintNumberPattern": "\\b20\\d\\d\\.(\\d+)"
+  },
+  "sprints": [
+    { "number": 14, "year": 2026, "start": "2026-06-24", "end": "2026-07-07" },
+    { "number": 15, "year": 2026, "start": "2026-07-08", "end": "2026-07-21" },
+    { "number": 16, "year": 2026, "start": "2026-07-22", "end": "2026-08-04" },
+    { "number": 17, "year": 2026, "start": "2026-08-05", "end": "2026-08-18" },
+    { "number": 18, "year": 2026, "start": "2026-08-19", "end": "2026-09-01" }
+  ],
+  "systems": [
+    { "name": "CNC", "color": "#5b2b90", "cap": 80, "tags": ["cnc", "cart service", "cartservice", "cart & checkout"], "comps": ["cartservice", "checkout"] },
+    { "name": "Payment Service", "color": "#1c7fc0", "cap": 21, "tags": ["payment service"], "comps": ["payment service", "venmo"] },
+    { "name": "UFE", "color": "#0f9a9a", "cap": 21, "tags": ["ufe"], "comps": ["ufe"] },
+    { "name": "iOS", "color": "#7a3fb0", "cap": 20, "tags": ["ios"], "comps": ["ios"] },
+    { "name": "Android", "color": "#4a9e2f", "cap": 20, "tags": ["android"], "comps": ["android"] },
+    { "name": "OMS", "color": "#c98a00", "cap": null, "tags": ["oms"], "comps": ["oms"] },
+    { "name": "C3", "color": "#98a2b3", "cap": null, "tags": ["c3"], "comps": ["c3"] },
+    { "name": "Email", "color": "#d24d8c", "cap": null, "tags": [], "comps": ["email"] },
+    { "name": "Data Platform", "color": "#546074", "cap": null, "tags": [], "comps": ["data"] },
+    { "name": "Other", "color": "#98a2b3", "cap": null, "tags": [], "comps": [] }
+  ],
+  "epicColors": ["#5b2b90", "#1c7fc0", "#4a9e2f", "#d24d8c", "#c98a00"],
+  "defaultDevBase": 40,
+  "historyCap": 100,
+  "defaultFilters": { "epic": "all", "system": "all", "status": "all", "q": "", "hideDone": false, "hideDropped": true, "hideBugs": false }
+}

@@ -1,25 +1,116 @@
 // REST + SSE routes for the visualizer.
 
 import { Router } from 'express';
-import { describeConfig } from '../config.js';
+import { describeConfig, loadDevplanConfig } from '../config.js';
 import {
   listInitiatives,
   getInitiativeDetail,
   getJiraDetail,
+  listSystems,
+  getSystemDetail,
+  getContribution,
 } from '../services/scanner.js';
 import { getStages, getStage, getReferenceDoc } from '../services/coaching.js';
 import { readArtifact, writeArtifact, listArtifacts } from '../services/artifacts.js';
 import { buildInitiativePipeline, CANONICAL_STAGES } from '../normalize.js';
 import { docsWatcher } from '../services/watcher.js';
-import { gitStatus, gitCommit } from '../services/git.js';
+import { gitStatus, gitCommit, gitBranches, gitCheckout } from '../services/git.js';
 import { suggestCommitMessage } from '../services/commitMessage.js';
+import { jiraMyself, jiraIssue, jiraEpicIssues, isValidIssueKey } from '../services/jira.js';
 
 export const api = Router();
+
+// ---- Dev Plan board: config + read-only live Jira proxy --------------------
+// The board reads its config over HTTP (sprints/systems/colors/defaults) and
+// pulls epics live from Jira through this proxy. Each Jira call forwards the
+// user's own PAT (X-Jira-Token header, never stored) as a Bearer token.
+
+// Strictly read-only: reject any non-GET method under /devplan with 405.
+api.all('/devplan/*', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  res.status(405).json({ error: 'This endpoint is read-only. Only GET is allowed.' });
+});
+
+api.get('/devplan/config', (req, res) => {
+  // Re-read fresh so the client picks up on-disk edits on refresh (server-only
+  // jira fields still need a restart). No secrets live in this file.
+  res.set('Cache-Control', 'no-store');
+  res.json(loadDevplanConfig());
+});
+
+api.get('/devplan/jira/myself', async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  const token = req.header('x-jira-token');
+  if (!token) {
+    return res.status(401).json({
+      error: 'Missing Jira token. Paste your Personal Access Token in the Connect panel.',
+    });
+  }
+  try {
+    res.json(await jiraMyself(token));
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    next(err);
+  }
+});
+
+api.get('/devplan/jira/issue', async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  const token = req.header('x-jira-token');
+  if (!token) return res.status(401).json({ error: 'Missing Jira token.' });
+  const key = req.query.key;
+  if (!key) return res.status(400).json({ error: 'key is required' });
+  if (!isValidIssueKey(String(key))) {
+    return res.status(400).json({ error: 'key must be a Jira issue key like PAY-123' });
+  }
+  try {
+    res.json(await jiraIssue(token, String(key)));
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    next(err);
+  }
+});
+
+api.get('/devplan/jira/epic-issues', async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  const token = req.header('x-jira-token');
+  if (!token) return res.status(401).json({ error: 'Missing Jira token.' });
+  const epic = req.query.epic;
+  if (!epic) return res.status(400).json({ error: 'epic is required' });
+  if (!isValidIssueKey(String(epic))) {
+    return res.status(400).json({ error: 'epic must be a Jira issue key like PAY-123' });
+  }
+  try {
+    res.json({ epic: String(epic), issues: await jiraEpicIssues(token, String(epic)) });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    next(err);
+  }
+});
 
 api.get('/git/status', async (req, res, next) => {
   try {
     res.json(await gitStatus());
   } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/git/branches', async (req, res, next) => {
+  try {
+    res.json(await gitBranches());
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.post('/git/checkout', async (req, res, next) => {
+  try {
+    const { branch, force } = req.body || {};
+    res.json(await gitCheckout(branch, { force: !!force }));
+  } catch (err) {
+    const map = { BAD_REQUEST: 400, CONFLICT: 409 };
+    if (err.code && map[err.code]) return res.status(map[err.code]).json({ error: err.message });
     next(err);
   }
 });
@@ -84,6 +175,36 @@ api.get('/initiatives/:name/jiras/:jiraId', async (req, res, next) => {
     const payload = { jira: detail.jira };
     if (req.query.raw === '1') payload.raw = detail.meta;
     res.json(payload);
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/initiatives/:name/contribution', async (req, res, next) => {
+  try {
+    const contribution = await getContribution(req.params.name);
+    if (!contribution) return res.status(404).json({ error: 'Initiative not found' });
+    res.json(contribution);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Cross-AMP steward index: every repo impacted across all AMPs, and per-repo detail.
+api.get('/systems', async (req, res, next) => {
+  try {
+    res.json({ systems: await listSystems() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/systems/:repo', async (req, res, next) => {
+  try {
+    const quarter = req.query.quarter ? String(req.query.quarter) : null;
+    const system = await getSystemDetail(req.params.repo, quarter);
+    if (!system) return res.status(404).json({ error: 'System not found' });
+    res.json({ system });
   } catch (err) {
     next(err);
   }

@@ -1,19 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { PipelineStrip } from './PipelineStrip';
-
-function impactClass(level) {
-  switch ((level || '').toUpperCase()) {
-    case 'CRITICAL':
-    case 'HIGH':
-      return 'crit';
-    case 'MEDIUM':
-      return 'warn';
-    case 'LOW':
-      return 'ok';
-    default:
-      return '';
-  }
-}
+import { jiraPath } from '../lib/paths';
+import { impactClass } from '../lib/impact';
 
 export function JiraBoard({ initiativeId, jiras }) {
   const navigate = useNavigate();
@@ -38,7 +26,7 @@ export function JiraBoard({ initiativeId, jiras }) {
         {jiras.map((j) => (
           <tr
             key={j.id}
-            onClick={() => navigate(`/initiatives/${encodeURIComponent(initiativeId)}/jiras/${encodeURIComponent(j.id)}`)}
+            onClick={() => navigate(jiraPath(initiativeId, j.id))}
           >
             <td className="mono" style={{ color: 'var(--accent)', fontWeight: 600 }}>
               {j.id}

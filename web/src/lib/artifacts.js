@@ -10,6 +10,10 @@
 // Keyword aliases per canonical stage, ordered so more specific stages win first
 // (e.g. "implementation-plan" -> Planning(6) before Implementation(8);
 //  "acceptance" -> Acceptance Tests(2) before Tests(7)).
+// Extensions the Architecture View renders (markdown + architecture deltas).
+// Shared so the tab-enable gate and the view's own filter can't drift apart.
+export const ARCH_EXTS = ['.md', '.diff', '.patch'];
+
 const STAGE_KEYWORDS = [
   [6, ['planning', 'implementation-plan', 'impl-plan']],
   [2, ['acceptance', 'testplan', 'test-plan', 'qe-test']],

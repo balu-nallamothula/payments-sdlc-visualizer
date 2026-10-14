@@ -4,6 +4,7 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
 // Load .env from the repo root (one level up from server/).
@@ -11,6 +12,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 
 const home = os.homedir();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function expandHome(p) {
   if (!p) return p;
@@ -43,6 +45,22 @@ const coachStagesDir = expandHome(
 );
 
 const workspaceRoot = expandHome(process.env.SEPHORA_WORKSPACE_ROOT || path.join(home, 'workspace'));
+
+// Dev Plan board config (jira field IDs, sprints, systems, colors, defaults).
+// Read fresh per request by the /api/devplan/config route so on-disk edits show
+// on a page refresh; server-only jira fields still need a restart (mirrors the
+// original standalone Dev Plan proxy). No secrets live in this file.
+const devplanConfigPath = expandHome(
+  process.env.DEVPLAN_CONFIG || path.resolve(__dirname, '..', 'devplan.config.json'),
+);
+
+export function loadDevplanConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(devplanConfigPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
 
 // Locate the installed Sephora plugins so the chat/SDK session can load them
 // (the SDK does NOT auto-load enabled plugins the way the interactive CLI does).
@@ -90,8 +108,19 @@ export const config = {
   sephoraPluginPaths: resolveSephoraPlugins(),
   chatBackend: (process.env.CHAT_BACKEND || 'cli').toLowerCase(),
   claudeBin: process.env.CLAUDE_BIN || 'claude',
+  // Optional model override for the chat engine. Leave empty to use the engine's
+  // default — but a newer SDK default (e.g. claude-opus-5-5) can exceed what an
+  // older installed `claude` CLI accepts, so pin a supported id here (e.g.
+  // claude-opus-4-8) as a workaround instead of upgrading the CLI.
+  chatModel: process.env.CHAT_MODEL || '',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   port: Number(process.env.PORT) || 4317,
+  // Dev Plan board (live Jira proxy).
+  devplanConfigPath,
+  jiraBase:
+    process.env.JIRA_BASE ||
+    (loadDevplanConfig().jira && loadDevplanConfig().jira.base) ||
+    'https://jira.sephora.com',
 };
 
 // The absolute directory we scan for initiatives, e.g. <projectDocs>/2026
@@ -108,9 +137,13 @@ export function describeConfig() {
     workspaceRoot: config.workspaceRoot,
     execCwd: config.execCwd,
     chatBackend: config.chatBackend,
+    chatModel: config.chatModel || null,
     sephoraPluginPaths: config.sephoraPluginPaths,
     sephoraPluginsFound: config.sephoraPluginPaths.length,
     year: config.year,
     port: config.port,
+    jiraBase: config.jiraBase,
+    devplanConfigPath: config.devplanConfigPath,
+    devplanConfigExists: fs.existsSync(config.devplanConfigPath),
   };
 }

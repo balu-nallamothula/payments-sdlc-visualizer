@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { PipelineStrip } from './PipelineStrip';
 import { summaryCells } from '../lib/stages';
+import { initiativePath } from '../lib/paths';
 
 export function InitiativeCard({ init }) {
   return (
-    <Link to={`/initiatives/${encodeURIComponent(init.id)}`} className="card" style={{ color: 'inherit', display: 'block' }}>
+    <Link to={initiativePath(init.id)} className="card" style={{ color: 'inherit', display: 'block' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>{init.initiativeName}</div>
