@@ -13,6 +13,16 @@ import { useChat } from '../context/ChatContext';
 import { useCurrentInitiative } from '../context/CurrentInitiativeContext';
 import { useSSE } from '../hooks/useSSE';
 import { IconArrowLeft, IconCalendar, IconChat, IconPlay, IconStar } from '../components/icons';
+import { Tabs } from '../components/Tabs';
+import { buildTabs } from '../lib/tabData';
+import { ImpactedSystems } from '../components/ImpactedSystems';
+import { ImpactAssessment } from '../components/ImpactAssessment';
+import { ReadinessScore } from '../components/ReadinessScore';
+import { ContributionHub } from '../components/ContributionHub';
+import { QualityEvidence } from '../components/QualityEvidence';
+import { ArchitectureView } from '../components/ArchitectureView';
+import { GuardrailsPanel } from '../components/GuardrailsPanel';
+import { PrReview } from '../components/PrReview';
 
 // Jira issue-key shape (e.g. PAY-6883); filters out placeholder epic refs.
 const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
@@ -44,6 +54,22 @@ export function InitiativeDetailPage({ name: nameProp }) {
         const p = new URLSearchParams(prev);
         if (cell) p.set('stage', String(cell.n));
         else p.delete('stage');
+        return p;
+      });
+    },
+    [setSearchParams],
+  );
+
+  // The active 360° tab also lives in the URL (?tab=), composing with ?stage=.
+  // A legacy ?stage=N link with no ?tab lands on the pipeline tab so it still works.
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam || (stageParam ? 'pipeline' : 'overview');
+  const selectTab = useCallback(
+    (id) => {
+      setSearchParams((prev) => {
+        const p = new URLSearchParams(prev);
+        p.set('tab', id);
+        if (id !== 'pipeline') p.delete('stage'); // stage selection only applies in the pipeline tab
         return p;
       });
     },
@@ -116,6 +142,10 @@ export function InitiativeDetailPage({ name: nameProp }) {
   if (!detail) return <div className="spinner">Loading initiative…</div>;
 
   const { initiative, pipeline, jiras } = detail;
+  const tabs = buildTabs({ detail, artifacts });
+  // Fall back to Overview if the URL points at a tab that's disabled for this
+  // initiative (e.g. ?tab=impact on an AMP with no impact scored).
+  const shownTab = tabs.some((t) => t.id === activeTab && !t.disabled) ? activeTab : 'overview';
   // The current stage to continue. In the initiative phase that's an initiative
   // stage (target = initiative). In the per-jira phase with a single Jira it's
   // that Jira's active stage (target = jira id).
@@ -208,60 +238,79 @@ export function InitiativeDetailPage({ name: nameProp }) {
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: 18 }}>
-        <h2>
-          {selectedStage
-            ? `Pipeline · Stage ${String(selectedStage.n).padStart(2, '0')} — ${selectedStage.name}`
-            : 'Pipeline'}
-        </h2>
-        <StageNodes cells={pipeline.cells} onSelect={selectStage} selectedN={selectedStage?.n} />
-        <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>
-          Stages 1–4 reflect this initiative; stages 5–12 aggregate across its Jiras. Click a stage to see its results.
-        </div>
-      </div>
+      <Tabs tabs={tabs} active={shownTab} onSelect={selectTab} />
 
-      {selectedStage ? (
-        <>
-          <StageResults
-            key={selectedStage.n}
-            n={selectedStage.n}
-            cell={selectedStage}
-            artifacts={artifacts}
-            perJiraHint={selectedStage.n >= 5}
-            onOpenArtifact={setOpenArtifact}
-            onClear={() => selectStage(null)}
-            onStart={selectedStage.n <= 4 ? startStage : undefined}
-            jiraList={perJiraList}
-            onJiraStart={startJiraStage}
-            jiraArtifacts={stageJiraArtifacts}
-            initiativeId={name}
-          />
-          {/* Jira Management (stage 4) produces the Jiras — show them alongside its
-              results. Stages 5–12 already list their Jiras inside StageResults. */}
-          {selectedStage.n === 4 && jiras.length > 0 && (
+      <div style={{ marginTop: 18 }}>
+        {shownTab === 'pipeline' && (
+          <>
+            <div className="card" style={{ marginBottom: 18 }}>
+              <h2>
+                {selectedStage
+                  ? `Pipeline · Stage ${String(selectedStage.n).padStart(2, '0')} — ${selectedStage.name}`
+                  : 'Pipeline'}
+              </h2>
+              <StageNodes cells={pipeline.cells} onSelect={selectStage} selectedN={selectedStage?.n} />
+              <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>
+                Stages 1–4 reflect this initiative; stages 5–12 aggregate across its Jiras. Click a stage to see its results.
+              </div>
+            </div>
+
+            {selectedStage && (
+              <>
+                <StageResults
+                  key={selectedStage.n}
+                  n={selectedStage.n}
+                  cell={selectedStage}
+                  artifacts={artifacts}
+                  perJiraHint={selectedStage.n >= 5}
+                  onOpenArtifact={setOpenArtifact}
+                  onClear={() => selectStage(null)}
+                  onStart={selectedStage.n <= 4 ? startStage : undefined}
+                  jiraList={perJiraList}
+                  onJiraStart={startJiraStage}
+                  jiraArtifacts={stageJiraArtifacts}
+                  initiativeId={name}
+                />
+                {/* Jira Management (stage 4) produces the Jiras — show them alongside its
+                    results. Stages 5–12 already list their Jiras inside StageResults. */}
+                {selectedStage.n === 4 && jiras.length > 0 && (
+                  <div className="card" style={{ marginBottom: 18 }}>
+                    <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+                      <h2 style={{ margin: 0 }}>Jiras ({jiras.length})</h2>
+                    </div>
+                    <JiraBoard initiativeId={name} jiras={jiras} />
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {shownTab === 'overview' && (
+          <>
             <div className="card" style={{ marginBottom: 18 }}>
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
                 <h2 style={{ margin: 0 }}>Jiras ({jiras.length})</h2>
               </div>
               <JiraBoard initiativeId={name} jiras={jiras} />
             </div>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="card" style={{ marginBottom: 18 }}>
-            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{ margin: 0 }}>Jiras ({jiras.length})</h2>
-            </div>
-            <JiraBoard initiativeId={name} jiras={jiras} />
-          </div>
 
-          <div className="card">
-            <h2>Artifacts ({artifacts.length})</h2>
-            <ArtifactGrid artifacts={artifacts} onOpen={setOpenArtifact} />
-          </div>
-        </>
-      )}
+            <div className="card">
+              <h2>Artifacts ({artifacts.length})</h2>
+              <ArtifactGrid artifacts={artifacts} onOpen={setOpenArtifact} />
+            </div>
+          </>
+        )}
+
+        {shownTab === 'impacted-systems' && <ImpactedSystems jiras={jiras} />}
+        {shownTab === 'impact' && <ImpactAssessment jiras={jiras} />}
+        {shownTab === 'contribution' && <ContributionHub initiativeId={name} />}
+        {shownTab === 'architecture' && <ArchitectureView artifacts={artifacts} repoCtx={repoCtx} />}
+        {shownTab === 'evidence' && <QualityEvidence jiras={jiras} initiativeId={name} />}
+        {shownTab === 'guardrails' && <GuardrailsPanel jiras={jiras} />}
+        {shownTab === 'pr-review' && <PrReview jiras={jiras} initiativeId={name} />}
+        {shownTab === 'readiness' && <ReadinessScore initiative={initiative} pipeline={pipeline} jiras={jiras} />}
+      </div>
 
       {openArtifact && <ArtifactViewer path={openArtifact} repoCtx={repoCtx} onClose={() => setOpenArtifact(null)} />}
     </div>

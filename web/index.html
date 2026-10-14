@@ -2,9 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <!-- Mount path. Standalone this is "/"; a reverse proxy (e.g. Nova) rewrites it
-         to the app's sub-path so relative asset/API URLs resolve inside the app. -->
-    <base href="/" />
+    <!-- No base tag here on purpose. Standalone and in dev the app is mounted at
+         the site root, so relative asset URLs resolve as-is. Under a reverse-proxy
+         sub-path the server injects an absolute base href at serve time so assets,
+         API and router all resolve inside the mount. -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <title>SDLC Visualizer — Sephora Agentic SDLC</title>
