@@ -9,7 +9,7 @@
 // (Impacted Systems, Impact, Readiness, Contribution, Evidence, Architecture,
 // Guardrails, PR Review, FlowGuard) slot in as each phase lands.
 import { rowGates } from './gates';
-import { artifactsForStage } from './artifacts';
+import { artifactsForStage, ARCH_EXTS } from './artifacts';
 
 const TAB_REGISTRY = [
   { id: 'overview', label: 'Overview' },
@@ -32,8 +32,8 @@ const TAB_REGISTRY = [
   {
     id: 'architecture',
     label: 'Architecture',
-    // Reuse the view's own stage-3 selector so enable ↔ render stay in sync.
-    hasData: ({ artifacts }) => artifactsForStage(artifacts || [], 3).some((a) => a.ext === '.md'),
+    // Reuse the view's own stage-3 selector + ext list so enable ↔ render stay in sync.
+    hasData: ({ artifacts }) => artifactsForStage(artifacts || [], 3).some((a) => ARCH_EXTS.includes(a.ext)),
   },
   {
     id: 'evidence',
