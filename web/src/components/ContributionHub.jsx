@@ -4,7 +4,7 @@ import { apiClient } from '../api/client';
 import { jiraPath } from '../lib/paths';
 import { displayName, initials } from '../lib/people';
 import { EmptyTab } from './EmptyTab';
-import { IconExternal } from './icons';
+import { IconDoc, IconExternal, IconGit, IconHealth, IconLayers, IconTicket, IconUsers } from './icons';
 
 const fmt = (iso) => {
   if (!iso) return '';
@@ -15,23 +15,102 @@ const fmt = (iso) => {
   }
 };
 
-const avatarStyle = {
-  width: 24,
-  height: 24,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'var(--accent-soft)',
-  color: 'var(--accent)',
-  fontSize: 10,
-  fontWeight: 700,
-  flex: '0 0 auto',
+// Deterministic avatar color per person (so the same name is always the same hue).
+const AV_COLORS = ['#e5484d', '#e8792b', '#f5a623', '#30a46c', '#2f6feb', '#8b5cf6', '#d6409f', '#0ea5e9'];
+const colorFor = (s) => AV_COLORS[[...String(s)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % AV_COLORS.length];
+
+const TONES = {
+  accent: { background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid transparent' },
+  ok: { background: 'var(--ok-soft)', color: 'var(--ok)', border: '1px solid transparent' },
+  plain: { background: 'var(--panel-2)', color: 'var(--text)', border: '1px solid var(--border)' },
 };
 
-// Contribution Hub: a single Contribution Summary (feature → AMP → repos →
-// contributors → PRs → stories) plus owners, a PR roll-up and the pipeline's
-// activity timeline. Summary fields come from the normalized jiras; owners/PRs/
-// timeline from /api/initiatives/:name/contribution (server aggregates progress_log).
+function Pill({ children, tone = 'plain' }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 10px',
+        borderRadius: 999,
+        fontSize: 12,
+        lineHeight: 1.4,
+        maxWidth: '100%',
+        ...TONES[tone],
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+// A chiclet list that shows `initial` items then a "+N more" pill to reveal the rest.
+function Chiclets({ items, initial, render }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? items : items.slice(0, initial);
+  const rest = items.length - shown.length;
+  return (
+    <>
+      {shown.map(render)}
+      {rest > 0 && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          style={{
+            padding: '4px 10px',
+            borderRadius: 999,
+            fontSize: 12,
+            border: '1px dashed var(--border)',
+            background: 'transparent',
+            color: 'var(--muted)',
+            cursor: 'pointer',
+          }}
+        >
+          +{rest} more
+        </button>
+      )}
+    </>
+  );
+}
+
+function Row({ icon, label, sub, count, children }) {
+  return (
+    <div
+      className="row"
+      style={{ gap: 14, alignItems: 'flex-start', padding: '14px 0', borderBottom: '1px solid var(--border)' }}
+    >
+      <div className="row" style={{ gap: 9, alignItems: 'flex-start', flex: '0 0 164px' }}>
+        <span style={{ color: 'var(--muted)', marginTop: 1 }}>{icon}</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
+            {label}
+            {count != null && <span className="badge" style={{ marginLeft: 6 }}>{count}</span>}
+          </div>
+          {sub && <div className="muted" style={{ fontSize: 11 }}>{sub}</div>}
+        </div>
+      </div>
+      <div className="row wrap" style={{ gap: 6, flex: 1, minWidth: 0 }}>{children}</div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value }) {
+  return (
+    <div style={{ flex: 1, border: '1px solid var(--border)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>{icon}</span>
+      <div>
+        <div className="muted" style={{ fontSize: 11 }}>{label}</div>
+        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+// Contribution Hub: a Contribution Summary (feature → epics → repos → contributors
+// as chiclets, + PR/story/activity stat cards) plus a PR roll-up and the pipeline's
+// activity timeline. Summary fields come from the normalized jiras; counts/owners/
+// PRs/timeline from /api/initiatives/:name/contribution (aggregates progress_log).
 export function ContributionHub({ initiativeId, initiativeName, jiras = [] }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -50,53 +129,81 @@ export function ContributionHub({ initiativeId, initiativeName, jiras = [] }) {
 
   const repos = [...new Set(jiras.flatMap((j) => (j.targetRepositories || []).map((r) => r.name).filter(Boolean)))];
   const epics = [...new Set(jiras.map((j) => j.epic).filter(Boolean))];
-  const reposLabel = repos.length
-    ? `${repos.length} — ${repos.slice(0, 6).join(', ')}${repos.length > 6 ? ` +${repos.length - 6} more` : ''}`
-    : '—';
-  const contribLabel = contributors.length
-    ? `${summary.contributorCount} — ${contributors.slice(0, 4).map((c) => displayName(c.name)).join(', ')}${contributors.length > 4 ? '…' : ''}`
-    : String(summary.contributorCount);
 
   return (
     <div>
       <div className="card" style={{ marginBottom: 18 }}>
-        <h2>Contribution summary</h2>
-        <div className="kv">
-          <div className="k">Feature</div>
-          <div className="v">{initiativeName || initiativeId}</div>
-          <div className="k">AMP</div>
-          <div className="v mono">{epics.length ? epics.join(', ') : initiativeId}</div>
-          <div className="k">Repositories impacted</div>
-          <div className="v">{reposLabel}</div>
-          <div className="k">Contributors</div>
-          <div className="v">{contribLabel}</div>
-          <div className="k">Pull requests</div>
-          <div className="v">{summary.prCount}</div>
-          <div className="k">Jira stories</div>
-          <div className="v">{summary.jiraCount}</div>
-          <div className="k">Activity events</div>
-          <div className="v">{summary.activityCount}</div>
+        <h2 style={{ marginBottom: 2 }}>Contribution summary</h2>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Key metadata and contributions for this initiative.</div>
+
+        <Row icon={<IconLayers width={17} height={17} />} label="Feature" sub="Main feature or service">
+          <Pill tone="accent">{initiativeName || initiativeId}</Pill>
+        </Row>
+
+        <Row icon={<IconTicket width={17} height={17} />} label="AMP" sub="Associated Jira epics">
+          {epics.length ? (
+            <Chiclets items={epics} initial={16} render={(e) => <Pill key={e} tone="accent">{e}</Pill>} />
+          ) : (
+            <span className="muted mono" style={{ fontSize: 12 }}>{initiativeId}</span>
+          )}
+        </Row>
+
+        <Row icon={<IconGit width={17} height={17} />} label="Repositories impacted" sub="Services and repositories" count={repos.length}>
+          {repos.length ? (
+            <Chiclets
+              items={repos}
+              initial={6}
+              render={(r) => (
+                <Pill key={r} tone="ok">
+                  <IconDoc width={12} height={12} />
+                  {r}
+                </Pill>
+              )}
+            />
+          ) : (
+            <span className="muted">—</span>
+          )}
+        </Row>
+
+        <Row icon={<IconUsers width={17} height={17} />} label="Contributors" sub="People who contributed" count={summary.contributorCount}>
+          {contributors.length ? (
+            <Chiclets
+              items={contributors}
+              initial={9}
+              render={(c) => (
+                <Pill key={c.name}>
+                  <span
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 999,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: colorFor(c.name),
+                      color: '#fff',
+                      fontSize: 9,
+                      fontWeight: 700,
+                      flex: '0 0 auto',
+                    }}
+                  >
+                    {initials(c.name)}
+                  </span>
+                  {displayName(c.name)}
+                </Pill>
+              )}
+            />
+          ) : (
+            <span className="muted">{summary.contributorCount}</span>
+          )}
+        </Row>
+
+        <div className="row" style={{ gap: 12, marginTop: 16 }}>
+          <StatCard icon={<IconGit width={18} height={18} />} label="Pull requests" value={summary.prCount} />
+          <StatCard icon={<IconTicket width={18} height={18} />} label="Jira stories" value={summary.jiraCount} />
+          <StatCard icon={<IconHealth width={18} height={18} />} label="Activity events" value={summary.activityCount} />
         </div>
       </div>
-
-      {contributors.length > 0 && (
-        <div className="card" style={{ marginBottom: 18 }}>
-          <h2>Owners</h2>
-          <div className="row wrap" style={{ gap: 10 }}>
-            {contributors.map((c) => (
-              <span
-                key={c.name}
-                className="row"
-                style={{ gap: 8, alignItems: 'center', border: '1px solid var(--border)', padding: '6px 10px' }}
-              >
-                <span style={avatarStyle}>{initials(c.name)}</span>
-                <span style={{ fontSize: 13 }}>{displayName(c.name)}</span>
-                <span className="badge">{c.jiraCount}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {prs.length > 0 && (
         <div className="card" style={{ marginBottom: 18 }}>

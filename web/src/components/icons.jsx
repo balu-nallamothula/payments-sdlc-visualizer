@@ -25,6 +25,14 @@ export const IconDashboard = mk(
     <rect x="3" y="16" width="7" height="5" rx="1.5" />
   </>,
 );
+export const IconUsers = mk(
+  <>
+    <path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 19v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </>,
+);
 export const IconLayers = mk(
   <>
     <path d="M12 2 2 7l10 5 10-5-10-5Z" />
