@@ -33,7 +33,7 @@ function Pill({ children, tone = 'plain' }) {
         alignItems: 'center',
         gap: 6,
         padding: '4px 10px',
-        borderRadius: 999,
+        borderRadius: 0,
         fontSize: 12,
         lineHeight: 1.4,
         maxWidth: '100%',
@@ -59,7 +59,7 @@ function Chiclets({ items, initial, render }) {
           onClick={() => setOpen(true)}
           style={{
             padding: '4px 10px',
-            borderRadius: 999,
+            borderRadius: 0,
             fontSize: 12,
             border: '1px dashed var(--border)',
             background: 'transparent',
@@ -176,7 +176,7 @@ export function ContributionHub({ initiativeId, initiativeName, jiras = [] }) {
                     style={{
                       width: 18,
                       height: 18,
-                      borderRadius: 999,
+                      borderRadius: 0,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
