@@ -13,7 +13,6 @@ import { artifactsForStage, ARCH_EXTS } from './artifacts';
 
 const TAB_REGISTRY = [
   { id: 'overview', label: 'Overview' },
-  { id: 'pipeline', label: 'AI SDLC Stages' },
   {
     id: 'contribution',
     label: 'Contribution',

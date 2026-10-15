@@ -61,15 +61,16 @@ export function InitiativeDetailPage({ name: nameProp }) {
   );
 
   // The active 360° tab also lives in the URL (?tab=), composing with ?stage=.
-  // A legacy ?stage=N link with no ?tab lands on the pipeline tab so it still works.
+  // The pipeline + stage selection live in Overview, so a legacy ?stage=N link
+  // (no ?tab) lands on Overview and still selects that stage.
   const tabParam = searchParams.get('tab');
-  const activeTab = tabParam || (stageParam ? 'pipeline' : 'overview');
+  const activeTab = tabParam || 'overview';
   const selectTab = useCallback(
     (id) => {
       setSearchParams((prev) => {
         const p = new URLSearchParams(prev);
         p.set('tab', id);
-        if (id !== 'pipeline') p.delete('stage'); // stage selection only applies in the pipeline tab
+        if (id !== 'overview') p.delete('stage'); // stage selection only applies in Overview
         return p;
       });
     },
@@ -241,7 +242,7 @@ export function InitiativeDetailPage({ name: nameProp }) {
       <Tabs tabs={tabs} active={shownTab} onSelect={selectTab} />
 
       <div style={{ marginTop: 18 }}>
-        {shownTab === 'pipeline' && (
+        {shownTab === 'overview' && (
           <>
             <div className="card" style={{ marginBottom: 18 }}>
               <h2>
@@ -255,7 +256,7 @@ export function InitiativeDetailPage({ name: nameProp }) {
               </div>
             </div>
 
-            {selectedStage && (
+            {selectedStage ? (
               <>
                 <StageResults
                   key={selectedStage.n}
@@ -282,23 +283,21 @@ export function InitiativeDetailPage({ name: nameProp }) {
                   </div>
                 )}
               </>
+            ) : (
+              <>
+                <div className="card" style={{ marginBottom: 18 }}>
+                  <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+                    <h2 style={{ margin: 0 }}>Jiras ({jiras.length})</h2>
+                  </div>
+                  <JiraBoard initiativeId={name} jiras={jiras} />
+                </div>
+
+                <div className="card">
+                  <h2>Artifacts ({artifacts.length})</h2>
+                  <ArtifactGrid artifacts={artifacts} onOpen={setOpenArtifact} />
+                </div>
+              </>
             )}
-          </>
-        )}
-
-        {shownTab === 'overview' && (
-          <>
-            <div className="card" style={{ marginBottom: 18 }}>
-              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-                <h2 style={{ margin: 0 }}>Jiras ({jiras.length})</h2>
-              </div>
-              <JiraBoard initiativeId={name} jiras={jiras} />
-            </div>
-
-            <div className="card">
-              <h2>Artifacts ({artifacts.length})</h2>
-              <ArtifactGrid artifacts={artifacts} onOpen={setOpenArtifact} />
-            </div>
           </>
         )}
 
