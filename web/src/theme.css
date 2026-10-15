@@ -80,8 +80,8 @@
   --accent-grad: linear-gradient(135deg, #7c5cf0 0%, #a78bfa 100%);
   --ok: #22c55e;
   --ok-soft: #e7f9ef;
-  --active: #f4517b;
-  --active-soft: #fdeaf0;
+  --active: #2f6feb;
+  --active-soft: #e7f0fe;
   --warn: #f59e0b;
   --warn-soft: #fdf3e0;
   --crit: #ef4444;
@@ -119,8 +119,8 @@
   --accent-soft: rgba(124, 92, 240, 0.16);
   --ok: #34d17f;
   --ok-soft: rgba(52, 209, 127, 0.14);
-  --active: #ff6390;
-  --active-soft: rgba(244, 81, 123, 0.16);
+  --active: #5b9bff;
+  --active-soft: rgba(47, 111, 235, 0.18);
   --warn: #f5b301;
   --warn-soft: rgba(245, 179, 1, 0.14);
   --crit: #ff6161;
