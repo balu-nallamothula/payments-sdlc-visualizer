@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { BoardPicker } from "./BoardPicker";
 import "./board.css";
 import { apiClient } from "../api/client.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
@@ -75,7 +76,7 @@ export default function DevPlanApp() {
   // follows a new selection. With no param, fall back once to the last-viewed
   // initiative — but only when the board is empty, so it never clobbers a board
   // you built manually.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const explicitEpics = searchParams.get("epics");
   const initiativeParam = searchParams.get("initiative");
   const [preloadKeys, setPreloadKeys] = useState([]);
@@ -186,6 +187,18 @@ export default function DevPlanApp() {
           </p>
         </div>
       </div>
+
+      <BoardPicker
+        current={initiativeParam}
+        onPick={(id) =>
+          setSearchParams((prev) => {
+            const p = new URLSearchParams(prev);
+            p.set("initiative", id);
+            p.delete("epics");
+            return p;
+          })
+        }
+      />
 
       <div className="devplan-toolbar row wrap">
         <div className="row" style={{ gap: 4 }}>

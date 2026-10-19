@@ -22,6 +22,10 @@ function deriveCurrentStage(cells) {
 
 const cache = new Map(); // key -> { mtimeMs, value }
 
+// Jira issue-key shape (e.g. PAY-6883) — used to surface an initiative's epics so
+// the Dev Plan board can be loaded by initiative/project instead of raw epic IDs.
+const EPIC_KEY_RE = /^[A-Za-z][A-Za-z0-9]+-\d+$/;
+
 async function readJsonSafe(file) {
   try {
     const txt = await fsp.readFile(file, 'utf8');
@@ -136,6 +140,9 @@ export async function listInitiatives() {
     summary.percent = pipeline.percent;
     summary.cells = pipeline.cells;
     summary.currentStageN = deriveCurrentStage(pipeline.cells) ?? summary.currentStageN;
+    // Distinct real epic keys this initiative rolls up to — lets the Dev Plan board
+    // be loaded by initiative/Jira-project instead of hand-typed epic IDs.
+    summary.epicKeys = [...new Set(jiras.map((j) => j.epic).filter((k) => k && EPIC_KEY_RE.test(k)))];
     out.push(summary);
   }
   // Newest-ish first, then alphabetical.
