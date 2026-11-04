@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# SDLC Visualizer — one-shot installer + launcher.
+# AMP Visualizer — one-shot installer + launcher.
 #
 # What it does:
 #   1. Checks that Node.js (>= 18) is installed.
@@ -147,7 +147,7 @@ if command -v lsof >/dev/null 2>&1 && lsof -iTCP:5317 -sTCP:LISTEN >/dev/null 2>
 fi
 WEB_URL="http://localhost:$WEB_PORT"
 
-say "Starting SDLC Visualizer"
+say "Starting AMP Visualizer"
 echo "  API : http://localhost:4317"
 echo "  Web : $WEB_URL"
 echo

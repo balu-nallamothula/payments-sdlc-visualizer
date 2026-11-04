@@ -1,4 +1,4 @@
-# SDLC Visualizer
+# AMP Visualizer
 
 A standalone React + Node app to **visualize** and **drive** the Sephora Agentic SDLC
 (`/seph-sdlc`) pipeline.
@@ -90,7 +90,7 @@ npm start        # server serves the API + the built UI on :4317
   it. **Scroll up in the Terminal** for the real error. The usual cause is a missing docs repo:
 
   ```
-  ✗ SDLC Visualizer cannot start.
+  ✗ AMP Visualizer cannot start.
   SEPHORA_PROJECT_DOCS points to a folder that does not exist on this machine: …
   ```
 

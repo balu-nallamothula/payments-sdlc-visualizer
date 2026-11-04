@@ -42,7 +42,7 @@ function preflight() {
   console.error(
     [
       '',
-      '  ✗ SDLC Visualizer cannot start.',
+      '  ✗ AMP Visualizer cannot start.',
       '',
       '  SEPHORA_PROJECT_DOCS points to a folder that does not exist on this machine:',
       `      ${c.projectDocs}`,
@@ -155,7 +155,7 @@ wss.on('connection', async (ws) => {
 server.listen(config.port, () => {
   const c = describeConfig();
   // eslint-disable-next-line no-console
-  console.log(`\n  SDLC Visualizer server`);
+  console.log(`\n  AMP Visualizer server`);
   console.log(`  → http://localhost:${config.port}`);
   console.log(`  project-docs: ${c.projectDocs} ${c.projectDocsExists ? '✓' : '✗ (not found)'}`);
   console.log(`  year dir:     ${c.yearDir} ${c.yearDirExists ? '✓' : '✗ (not found)'}`);

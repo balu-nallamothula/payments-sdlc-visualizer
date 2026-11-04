@@ -7,7 +7,7 @@ export async function jiraFetch(token, path) {
   try {
     res = await fetch(apiPath(`/api/devplan/jira/${path}`), { headers: { "X-Jira-Token": token } });
   } catch {
-    throw new Error("Couldn't reach the server. Make sure the SDLC Visualizer server is running.");
+    throw new Error("Couldn't reach the server. Make sure the AMP Visualizer server is running.");
   }
   let data = {};
   try {

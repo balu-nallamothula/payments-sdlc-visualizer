@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# pack-drop.sh — build a clean Nova Drop bundle for the SDLC Visualizer.
+# pack-drop.sh — build a clean Nova Drop bundle for the AMP Visualizer.
 #
 # Nova runs your entrypoint; it does NOT build and does NOT run `npm install`.
 # So the bundle must ship: the built SPA (web/dist), the server source, a single
@@ -89,7 +89,7 @@ rm -f "$STAGE/package-lock.json"
 
 step "Write README-DROP.md (what Nova needs to know)"
 cat > "$STAGE/README-DROP.md" <<'EOF'
-# SDLC Visualizer — Nova Drop bundle
+# AMP Visualizer — Nova Drop bundle
 
 One Node process serves both the built SPA and the REST/SSE/WebSocket API.
 

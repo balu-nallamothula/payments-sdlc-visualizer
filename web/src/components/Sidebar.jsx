@@ -46,7 +46,7 @@ export function Sidebar({ collapsed, onToggleCollapse }) {
         <span className="mark">
           <IconLayers width={20} height={20} />
         </span>
-        <span className="name">SDLC Visualizer</span>
+        <span className="name">AMP Visualizer</span>
       </div>
 
       {SECTIONS.map((section) => (
