@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { BoardPicker } from "./BoardPicker";
 import "./board.css";
 import { apiClient } from "../api/client.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
@@ -13,7 +14,6 @@ import { useBoardModel } from "./hooks/useBoardModel.js";
 import { useHistory } from "./hooks/useHistory.js";
 import { useSprintSnapshots } from "./hooks/useSprintSnapshots.js";
 import { useBoardIO } from "./hooks/useBoardIO.js";
-import SetupPanel from "./components/SetupPanel.jsx";
 import Kpis from "./components/Kpis.jsx";
 import Controls from "./components/Controls.jsx";
 import TeamPanel from "./components/TeamPanel.jsx";
@@ -26,11 +26,12 @@ import Toast from "./components/Toast.jsx";
 
 const SYSTEM_NAMES = SYSTEMS.map((s) => s.name);
 
+// `slug` is the URL segment under /dev-plan (board is the index, no segment).
 const PAGES = [
-  { id: "board", label: "Board" },
-  { id: "history", label: "History" },
-  { id: "teams", label: "Team" },
-  { id: "settings", label: "Settings" },
+  { id: "board", slug: "", label: "Board" },
+  { id: "history", slug: "history", label: "History" },
+  { id: "teams", slug: "team", label: "Team" },
+  { id: "settings", slug: "settings", label: "Settings" },
 ];
 
 // Map the Jira connection colour onto a host badge variant.
@@ -50,11 +51,24 @@ const epicsOfInitiative = (d) =>
 export default function DevPlanApp() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [toast, setToast] = useState(null);
-  const [setupOpen, setSetupOpen] = useState(true);
   const [changesOpen, setChangesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(true);
-  const [activePage, setActivePage] = useState("board");
   const [kpisOpen, setKpisOpen] = useLocalStorage("devplan:kpisOpen", true);
+
+  // Sub-page lives in the URL (/dev-plan, /dev-plan/history, /dev-plan/team,
+  // /dev-plan/settings) so it's deep-linkable and reload-safe. Derived from the
+  // splat; the board stays mounted across tabs so its state persists.
+  const navigate = useNavigate();
+  const location = useLocation();
+  const sub = (useParams()["*"] || "").split("/")[0];
+  const activePage = PAGES.find((p) => p.slug === sub)?.id || "board";
+  const setActivePage = useCallback(
+    (id) => {
+      const slug = PAGES.find((p) => p.id === id)?.slug ?? "";
+      navigate({ pathname: `/dev-plan${slug ? `/${slug}` : ""}`, search: location.search });
+    },
+    [navigate, location.search],
+  );
 
   // Preload: which epics to show on open, resolved from the URL. `?epics=` is a
   // direct list; `?initiative=<name>` (from the sidebar / "Open in Dev Plan") is
@@ -62,7 +76,7 @@ export default function DevPlanApp() {
   // follows a new selection. With no param, fall back once to the last-viewed
   // initiative — but only when the board is empty, so it never clobbers a board
   // you built manually.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const explicitEpics = searchParams.get("epics");
   const initiativeParam = searchParams.get("initiative");
   const [preloadKeys, setPreloadKeys] = useState([]);
@@ -97,11 +111,8 @@ export default function DevPlanApp() {
     sortMode: plan.sortMode, team: team.team, selectedSprint: plan.selectedSprint,
   });
   const io = useBoardIO({
-    jira, plan, board, history, snapshots, allIssues, filters,
-    showToast, setSetupOpen, setActivePage,
+    jira, plan, board, history, snapshots, allIssues, filters, showToast,
   });
-
-  useEffect(() => { if (jira.hasData) setSetupOpen(false); }, [jira.hasData]);
 
   // Resolve the preload target from the URL and load it. Re-runs when the target
   // changes (e.g. picking a different initiative), so the board follows selection.
@@ -134,12 +145,9 @@ export default function DevPlanApp() {
       if (cancelled || !keys.length || loadedSig.current === sig) return;
       loadedSig.current = sig;
       setPreloadKeys(keys);
-      if (jira.token) {
-        jira.loadEpics(keys);
-        setSetupOpen(false);
-      } else {
-        setSetupOpen(true); // prompt connect with the keys prefilled
-      }
+      // With a token we auto-load; without one the empty state points to Settings
+      // (naming the wanted keys), where the board is set up.
+      if (jira.token) jira.loadEpics(keys);
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,7 +156,24 @@ export default function DevPlanApp() {
   const hasData = jira.hasData;
   const epicLabel = Object.values(jira.epics).map((e) => shortName(e)).join(" + ");
   const multiEpic = Object.keys(jira.epics).length > 1;
-  const onLoad = async (keys) => { if (await jira.loadEpics(keys)) setSetupOpen(false); };
+
+  // A specific board can be requested via ?epics= / ?initiative=. The board caches
+  // the last-loaded epics in localStorage, so without this guard, opening a
+  // DIFFERENT initiative would show the previous (stale) board whenever the
+  // requested one can't load (no token, or a failed fetch). Only treat the board
+  // as ready when the loaded epics are exactly the requested ones.
+  const loadedKeys = Object.keys(jira.epics);
+  const requestedKeys = explicitEpics
+    ? explicitEpics.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+    : preloadKeys;
+  const targetMatches =
+    requestedKeys.length === 0 ||
+    (loadedKeys.length === requestedKeys.length && requestedKeys.every((k) => loadedKeys.includes(k)));
+  const showBoard = hasData && targetMatches;
+  // Carry the requested epic(s) to Settings so its "Epic key(s)" field is prefilled.
+  const settingsHref = requestedKeys.length
+    ? `/settings?epics=${encodeURIComponent(requestedKeys.join(","))}`
+    : "/settings";
 
   const connBadge = CONN_BADGE[jira.conn.color] || "";
 
@@ -158,10 +183,22 @@ export default function DevPlanApp() {
         <div>
           <h1 className="page-title">Dev Plan</h1>
           <p className="page-sub">
-            {hasData ? epicLabel : "Load an epic to see its tickets across sprints & systems."}
+            {showBoard ? epicLabel : "Load an epic to see its tickets across sprints & systems."}
           </p>
         </div>
       </div>
+
+      <BoardPicker
+        current={initiativeParam}
+        onPick={(id) =>
+          setSearchParams((prev) => {
+            const p = new URLSearchParams(prev);
+            p.set("initiative", id);
+            p.delete("epics");
+            return p;
+          })
+        }
+      />
 
       <div className="devplan-toolbar row wrap">
         <div className="row" style={{ gap: 4 }}>
@@ -178,31 +215,19 @@ export default function DevPlanApp() {
         </div>
         <div className="spacer" />
         <span className={`badge ${connBadge}`} title={jira.conn.text}>{jira.conn.text}</span>
-        {hasData && (
+        {showBoard && (
           <button className="btn sm" type="button" disabled={!plan.dirtyCount} onClick={() => setChangesOpen(true)}
             title="Discard local moves and snap tickets back to their Jira sprint">
             Undo Local Changes{plan.dirtyCount ? ` (${plan.dirtyCount})` : ""}
           </button>
         )}
-        <button className="btn sm" type="button" disabled={!hasData || jira.busy} onClick={jira.sync}>
+        <button className="btn sm" type="button" disabled={!showBoard || jira.busy} onClick={jira.sync}>
           {jira.busy ? "Syncing…" : "Sync from Jira"}
         </button>
-        <button className="btn sm primary" type="button" onClick={() => setSetupOpen((s) => !s)}>
-          Connect & load
-        </button>
+        <Link className="btn sm primary" to="/settings">Board setup</Link>
       </div>
 
-      {setupOpen && (
-        <SetupPanel
-          key={preloadKeys.join(",") || "setup"}
-          token={jira.token} setToken={jira.setToken} log={jira.log} busy={jira.busy}
-          initialKeys={preloadKeys.length ? preloadKeys : Object.keys(jira.epics)}
-          onTest={jira.doTest} onClear={jira.clearToken} onLoad={onLoad}
-          onImport={io.onImportBoard}
-        />
-      )}
-
-      {activePage === "board" && (hasData ? (
+      {activePage === "board" && (showBoard ? (
         <>
           {kpisOpen && <Kpis kpis={board.kpis} />}
           <Controls
@@ -218,11 +243,41 @@ export default function DevPlanApp() {
             multiEpic={multiEpic}
           />
         </>
+      ) : requestedKeys.length && !targetMatches ? (
+        // A specific initiative was requested but its board isn't loaded (loading,
+        // failed, or no token) — show that, never the previous cached board.
+        <section className="empty-state">
+          <div className="empty-card">
+            {jira.busy ? (
+              <>
+                <h2>Loading {requestedKeys.join(", ")}…</h2>
+                <p>Fetching this initiative's board from Jira.</p>
+              </>
+            ) : (
+              <>
+                <h2>Couldn't load {requestedKeys.join(", ")}</h2>
+                <p>
+                  {jira.token ? (
+                    <>Jira didn't return this board. Check the epic or your token in <Link to={settingsHref}>Settings</Link>.</>
+                  ) : (
+                    <>Connect Jira in <Link to={settingsHref}>Settings</Link> to load this initiative's board.</>
+                  )}
+                </p>
+              </>
+            )}
+          </div>
+        </section>
       ) : (
         <section className="empty-state">
           <div className="empty-card">
             <h2>No epic loaded yet</h2>
-            <p>Connect with your Jira token and load an epic (e.g. <code>PAY-6883</code>) to build the board.</p>
+            <p>
+              {jira.token ? (
+                <>Load an epic in <Link to="/settings">Settings</Link> to build the board.</>
+              ) : (
+                <>Connect Jira and load an epic in <Link to="/settings">Settings</Link> to build the board.</>
+              )}
+            </p>
           </div>
         </section>
       ))}

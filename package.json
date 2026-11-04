@@ -9,11 +9,12 @@
     "web"
   ],
   "scripts": {
-    "dev": "npm-run-all --parallel dev:server dev:web",
+    "dev": "npm-run-all --parallel --continue-on-error dev:server dev:web",
     "dev:server": "npm run dev --workspace=server",
     "dev:web": "npm run dev --workspace=web",
     "build": "npm run build --workspace=web",
     "start": "npm run start --workspace=server",
+    "pack:drop": "bash pack-drop.sh",
     "spike": "node server/scripts/spike-chat.mjs"
   },
   "devDependencies": {

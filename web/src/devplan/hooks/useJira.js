@@ -33,7 +33,20 @@ function computeSyncDiff(oldMap, newEpics) {
 // Connection + epic loading. Owns token/conn/epics/busy/log, the auto-restore,
 // and the sync diff (what changed in Jira since the last pull).
 export function useJira(showToast, onSyncEvent, { autoRestore = true } = {}) {
-  const [token, setToken] = useLocalStorage(KEYS.token, "");
+  // The token is a RAW string shared with Settings and the live Jira data on
+  // ticket pages (both read/write localStorage[KEYS.token] as a plain string).
+  // useLocalStorage JSON-encodes, which can't parse that value (→ empty token,
+  // "Not connected"), so manage the token plainly here; epics/loaded stay JSON.
+  const [token, setTokenState] = useState(() => {
+    try { return localStorage.getItem(KEYS.token) || ""; } catch { return ""; }
+  });
+  const setToken = useCallback((next) => {
+    setTokenState(next);
+    try {
+      if (next) localStorage.setItem(KEYS.token, next);
+      else localStorage.removeItem(KEYS.token);
+    } catch { /* ignore */ }
+  }, []);
   const [loadedKeys, setLoadedKeys] = useLocalStorage(KEYS.loaded, []);
   // Board snapshot persists across sessions so it's visible before any Jira call
   // and gives Sync a baseline to diff against.

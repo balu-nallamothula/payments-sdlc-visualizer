@@ -1,6 +1,6 @@
-# SDLC Visualizer — Getting Started
+# AMP Visualizer — Getting Started
 
-A quick guide to install and run the SDLC Visualizer on your own Mac so you can test it.
+A quick guide to install and run the AMP Visualizer on your own Mac so you can test it.
 No developer setup knowledge required.
 
 ---

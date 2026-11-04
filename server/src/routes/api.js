@@ -6,12 +6,15 @@ import {
   listInitiatives,
   getInitiativeDetail,
   getJiraDetail,
+  listSystems,
+  getSystemDetail,
+  getContribution,
 } from '../services/scanner.js';
 import { getStages, getStage, getReferenceDoc } from '../services/coaching.js';
 import { readArtifact, writeArtifact, listArtifacts } from '../services/artifacts.js';
 import { buildInitiativePipeline, CANONICAL_STAGES } from '../normalize.js';
 import { docsWatcher } from '../services/watcher.js';
-import { gitStatus, gitCommit } from '../services/git.js';
+import { gitStatus, gitCommit, gitBranches, gitCheckout } from '../services/git.js';
 import { suggestCommitMessage } from '../services/commitMessage.js';
 import { jiraMyself, jiraIssue, jiraEpicIssues, isValidIssueKey } from '../services/jira.js';
 
@@ -93,6 +96,25 @@ api.get('/git/status', async (req, res, next) => {
   }
 });
 
+api.get('/git/branches', async (req, res, next) => {
+  try {
+    res.json(await gitBranches());
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.post('/git/checkout', async (req, res, next) => {
+  try {
+    const { branch, force } = req.body || {};
+    res.json(await gitCheckout(branch, { force: !!force }));
+  } catch (err) {
+    const map = { BAD_REQUEST: 400, CONFLICT: 409 };
+    if (err.code && map[err.code]) return res.status(map[err.code]).json({ error: err.message });
+    next(err);
+  }
+});
+
 api.post('/git/suggest-message', async (req, res, next) => {
   try {
     res.json(await suggestCommitMessage());
@@ -153,6 +175,36 @@ api.get('/initiatives/:name/jiras/:jiraId', async (req, res, next) => {
     const payload = { jira: detail.jira };
     if (req.query.raw === '1') payload.raw = detail.meta;
     res.json(payload);
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/initiatives/:name/contribution', async (req, res, next) => {
+  try {
+    const contribution = await getContribution(req.params.name);
+    if (!contribution) return res.status(404).json({ error: 'Initiative not found' });
+    res.json(contribution);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Cross-AMP steward index: every repo impacted across all AMPs, and per-repo detail.
+api.get('/systems', async (req, res, next) => {
+  try {
+    res.json({ systems: await listSystems() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+api.get('/systems/:repo', async (req, res, next) => {
+  try {
+    const quarter = req.query.quarter ? String(req.query.quarter) : null;
+    const system = await getSystemDetail(req.params.repo, quarter);
+    if (!system) return res.status(404).json({ error: 'System not found' });
+    res.json({ system });
   } catch (err) {
     next(err);
   }

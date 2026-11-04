@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# SDLC Visualizer — one-shot installer + launcher.
+# AMP Visualizer — one-shot installer + launcher.
 #
 # What it does:
 #   1. Checks that Node.js (>= 18) is installed.
@@ -18,7 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-WEB_URL="http://localhost:5317"
+WEB_PORT=5317
 
 say()  { printf "\n\033[1;36m==> %s\033[0m\n" "$1"; }
 ok()   { printf "\033[1;32m  ✓ %s\033[0m\n" "$1"; }
@@ -103,13 +103,51 @@ else
   ok ".env already exists — leaving it as-is"
 fi
 
+# --- 2b. Pre-flight: the docs repo the app reads must exist ------------------
+# Checked here so a missing/mis-pathed repo fails with a clear message, instead
+# of the API exiting at launch and taking the web server down with it (which
+# looks like a cryptic "localhost refused to connect").
+say "Checking the docs repo"
+DOCS="$(grep -E '^[[:space:]]*SEPHORA_PROJECT_DOCS=' .env 2>/dev/null | tail -1 | cut -d'=' -f2- | sed -e 's/[[:space:]]*#.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/")"
+DOCS="${DOCS:-$HOME/workspace/sephora-project-docs}"
+case "$DOCS" in
+  "~") DOCS="$HOME" ;;
+  "~/"*) DOCS="$HOME/${DOCS#\~/}" ;;
+esac
+if [ ! -d "$DOCS" ]; then
+  printf "\n\033[1;31m✗ Can't start: sephora-project-docs was not found.\033[0m\n\n"
+  echo "  The visualizer reads a local clone of sephora-project-docs, but nothing"
+  echo "  exists at the configured path:"
+  echo
+  echo "      $DOCS"
+  echo
+  echo "  Fix it one of two ways, then re-run ./start.sh:"
+  echo
+  echo "    1) Clone the repo to that location, for example:"
+  echo "         git clone <sephora-project-docs-url> \"$DOCS\""
+  echo
+  echo "    2) Or point the app at an existing clone — edit .env and set:"
+  echo "         SEPHORA_PROJECT_DOCS=/full/path/to/your/sephora-project-docs"
+  echo
+  exit 1
+fi
+ok "Docs repo: $DOCS"
+
 # --- 3. Install dependencies -------------------------------------------------
 say "Installing dependencies (this can take a minute the first time)"
 npm install
 ok "Dependencies installed"
 
 # --- 4. Launch ---------------------------------------------------------------
-say "Starting SDLC Visualizer"
+# If 5317 is already taken, Vite falls back to the next free port (5318); open
+# that instead so the browser lands on the right tab.
+if command -v lsof >/dev/null 2>&1 && lsof -iTCP:5317 -sTCP:LISTEN >/dev/null 2>&1; then
+  WEB_PORT=5318
+  warn "Port 5317 is in use — the web UI will open on $WEB_PORT instead."
+fi
+WEB_URL="http://localhost:$WEB_PORT"
+
+say "Starting AMP Visualizer"
 echo "  API : http://localhost:4317"
 echo "  Web : $WEB_URL"
 echo

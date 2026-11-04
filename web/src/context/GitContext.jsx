@@ -8,9 +8,7 @@ const Ctx = createContext(null);
 export function GitProvider({ children }) {
   const [status, setStatus] = useState({ branch: null, files: [] });
 
-  const refresh = useCallback(() => {
-    apiClient.gitStatus().then(setStatus).catch(() => {});
-  }, []);
+  const refresh = useCallback(() => apiClient.gitStatus().then(setStatus).catch(() => {}), []);
 
   useEffect(() => {
     refresh();
@@ -20,15 +18,26 @@ export function GitProvider({ children }) {
 
   const changed = useMemo(() => new Set((status.files || []).map((f) => f.path)), [status]);
 
+  // Switch the sephora-project-docs branch, then refresh status. Throws on
+  // failure (e.g. uncommitted changes) so the caller can surface the reason.
+  const checkout = useCallback(async (branch, opts) => {
+    const result = await apiClient.gitCheckout(branch, opts);
+    await refresh(); // keep callers "busy" until the new branch is reflected
+    return result;
+  }, [refresh]);
+
   const value = useMemo(
-    () => ({ branch: status.branch, files: status.files || [], changed, count: (status.files || []).length, refresh }),
-    [status, changed, refresh],
+    () => ({ branch: status.branch, files: status.files || [], changed, count: (status.files || []).length, refresh, checkout }),
+    [status, changed, refresh, checkout],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useGit() {
   return (
-    useContext(Ctx) || { branch: null, files: [], changed: new Set(), count: 0, refresh: () => {} }
+    useContext(Ctx) || {
+      branch: null, files: [], changed: new Set(), count: 0,
+      refresh: () => {}, checkout: async () => {},
+    }
   );
 }

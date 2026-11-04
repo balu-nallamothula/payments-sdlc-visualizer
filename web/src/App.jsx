@@ -1,21 +1,24 @@
 import { useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider, useChat } from './context/ChatContext';
 import { GitProvider } from './context/GitContext';
 import { CurrentInitiativeProvider } from './context/CurrentInitiativeContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { InitiativeCreateWatcher } from './components/InitiativeCreateWatcher';
 import { ChatPanel } from './components/ChatPanel';
 import { ChatRail } from './components/ChatRail';
 import { IconChat } from './components/icons';
-import { DashboardPage } from './pages/Dashboard';
 import { InitiativesPage } from './pages/Initiatives';
 import { InitiativeRoute } from './pages/InitiativeRoute';
 import { StagesPage } from './pages/Stages';
-import { IntegrationsPage } from './pages/Integrations';
 import { ArtifactsPage } from './pages/Artifacts';
 import { DevPlanPage } from './pages/DevPlan';
+import { SettingsPage } from './pages/Settings';
+import { SystemsPage } from './pages/Systems';
+import { SystemDetailPage } from './pages/SystemDetail';
 
 function ChatDock() {
   const chat = useChat();
@@ -46,18 +49,21 @@ function Shell() {
   const [collapsed, setCollapsed] = useState(false);
   return (
     <div className={`layout ${collapsed ? 'collapsed' : ''}`}>
+      <InitiativeCreateWatcher />
       <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <div className="main">
         <TopBar />
         <div className="content">
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<Navigate to="/initiatives" replace />} />
             <Route path="/initiatives" element={<InitiativesPage />} />
             <Route path="/initiatives/*" element={<InitiativeRoute />} />
             <Route path="/stages" element={<StagesPage />} />
             <Route path="/artifacts" element={<ArtifactsPage />} />
-            <Route path="/dev-plan" element={<DevPlanPage />} />
-            <Route path="/integrations" element={<IntegrationsPage />} />
+            <Route path="/dev-plan/*" element={<DevPlanPage />} />
+            <Route path="/systems" element={<SystemsPage />} />
+            <Route path="/systems/:repo" element={<SystemDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </div>
@@ -72,7 +78,9 @@ export function App() {
       <GitProvider>
         <ChatProvider>
           <CurrentInitiativeProvider>
-            <Shell />
+            <ConfirmProvider>
+              <Shell />
+            </ConfirmProvider>
           </CurrentInitiativeProvider>
         </ChatProvider>
       </GitProvider>

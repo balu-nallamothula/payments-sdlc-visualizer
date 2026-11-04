@@ -1,13 +1,18 @@
 import { IconLive } from './icons';
+import { useConfirm } from '../context/ConfirmContext';
 
 /** Opt-in live-refresh toggle. Enabling asks for permission first. */
 export function LiveToggle({ enabled, connected, onToggle }) {
-  function handleClick() {
+  const confirm = useConfirm();
+  async function handleClick() {
     if (!enabled) {
-      const ok = window.confirm(
-        'Enable live refresh?\n\nThe app will watch sephora-project-docs for changes and update ' +
-          'the view automatically as the pipeline runs. Read-only; nothing is written.',
-      );
+      const ok = await confirm({
+        title: 'Enable live refresh?',
+        message:
+          'The app will watch sephora-project-docs for changes and update the view ' +
+          'automatically as the pipeline runs. Read-only; nothing is written.',
+        confirmLabel: 'Enable',
+      });
       if (!ok) return;
       onToggle(true);
     } else {

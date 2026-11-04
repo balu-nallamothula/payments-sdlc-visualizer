@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiPath } from '../lib/basePath';
 
 /**
  * Opt-in live refresh. Only connects when `enabled` is true (the user flips the
@@ -15,7 +16,7 @@ export function useSSE(enabled, onChange) {
       setConnected(false);
       return;
     }
-    const es = new EventSource('/api/events');
+    const es = new EventSource(apiPath('/api/events'));
     es.addEventListener('ready', () => setConnected(true));
     es.addEventListener('change', (e) => {
       try {

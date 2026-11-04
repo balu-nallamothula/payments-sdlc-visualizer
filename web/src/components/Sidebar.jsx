@@ -3,18 +3,14 @@ import { useCurrentInitiative } from '../context/CurrentInitiativeContext';
 import {
   IconCalendar,
   IconChevronLeft,
-  IconDashboard,
   IconDoc,
+  IconGit,
   IconLayers,
-  IconPlug,
+  IconSettings,
   IconStages,
 } from './icons';
 
 const SECTIONS = [
-  {
-    title: 'Overview',
-    items: [{ to: '/', label: 'Dashboard', icon: IconDashboard, end: true }],
-  },
   {
     title: 'Workflow',
     items: [
@@ -27,8 +23,15 @@ const SECTIONS = [
     items: [
       { to: '/artifacts', label: 'Artifacts', icon: IconDoc },
       { to: '/dev-plan', label: 'Dev Plan', icon: IconCalendar, devPlan: true },
-      { to: '/integrations', label: 'Integrations', icon: IconPlug },
     ],
+  },
+  {
+    title: 'Command Center',
+    items: [{ to: '/systems', label: 'Systems', icon: IconGit }],
+  },
+  {
+    title: 'System',
+    items: [{ to: '/settings', label: 'Settings', icon: IconSettings }],
   },
 ];
 
@@ -43,7 +46,7 @@ export function Sidebar({ collapsed, onToggleCollapse }) {
         <span className="mark">
           <IconLayers width={20} height={20} />
         </span>
-        <span className="name">SDLC Visualizer</span>
+        <span className="name">AMP Visualizer</span>
       </div>
 
       {SECTIONS.map((section) => (

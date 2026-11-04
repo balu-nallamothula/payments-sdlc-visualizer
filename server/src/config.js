@@ -108,6 +108,11 @@ export const config = {
   sephoraPluginPaths: resolveSephoraPlugins(),
   chatBackend: (process.env.CHAT_BACKEND || 'cli').toLowerCase(),
   claudeBin: process.env.CLAUDE_BIN || 'claude',
+  // Optional model override for the chat engine. Leave empty to use the engine's
+  // default — but a newer SDK default (e.g. claude-opus-5-5) can exceed what an
+  // older installed `claude` CLI accepts, so pin a supported id here (e.g.
+  // claude-opus-4-8) as a workaround instead of upgrading the CLI.
+  chatModel: process.env.CHAT_MODEL || '',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   port: Number(process.env.PORT) || 4317,
   // Dev Plan board (live Jira proxy).
@@ -132,6 +137,7 @@ export function describeConfig() {
     workspaceRoot: config.workspaceRoot,
     execCwd: config.execCwd,
     chatBackend: config.chatBackend,
+    chatModel: config.chatModel || null,
     sephoraPluginPaths: config.sephoraPluginPaths,
     sephoraPluginsFound: config.sephoraPluginPaths.length,
     year: config.year,

@@ -5,9 +5,15 @@
 // immutable (replaced on every change). Live handles (WebSocket, pending command)
 // are kept in side maps off the snapshot so they aren't serialized.
 
+import { markPendingCreate } from '../lib/pendingCreate';
+import { BASE_PATH } from '../lib/basePath';
+
 const STORAGE_KEY = 'sdlc-chats-v2';
 const MAX_LOG = 300;
 const MAX_HISTORY = 40;
+
+// A new-initiative kickoff, e.g. "/seph-sdlc create Add Stripe Link…".
+const CREATE_CMD_RE = /^\/seph-sdlc\s+create\b/i;
 
 const wsMap = new Map(); // id -> WebSocket
 const pendingMap = new Map(); // id -> command to auto-send once open
@@ -30,9 +36,22 @@ function commit() {
   listeners.forEach((l) => l());
 }
 
+// Drop base64 image payloads before persisting — they'd blow the localStorage
+// quota. The lightweight marker ({media_type}) keeps the log shape so a reloaded
+// session shows a "[image]" placeholder instead of the full picture.
+function stripLogImages(log) {
+  return log.map((item) => {
+    const ev = item.event;
+    if (ev && Array.isArray(ev.images) && ev.images.length) {
+      return { ...item, event: { ...ev, images: ev.images.map((im) => ({ media_type: im.media_type })) } };
+    }
+    return item;
+  });
+}
+
 function persist() {
   try {
-    const enc = (s) => ({ id: s.id, title: s.title, target: s.target, createdAt: s.createdAt, log: s.log.slice(-MAX_LOG) });
+    const enc = (s) => ({ id: s.id, title: s.title, target: s.target, createdAt: s.createdAt, log: stripLogImages(s.log.slice(-MAX_LOG)) });
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ sessions: sessions.map(enc), history: history.slice(0, MAX_HISTORY).map(enc), activeId }),
@@ -119,7 +138,7 @@ function connect(id) {
   if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) return;
   patch(id, { state: 'connecting' });
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${window.location.host}/ws/chat`);
+  const ws = new WebSocket(`${proto}://${window.location.host}${BASE_PATH}/ws/chat`);
   wsMap.set(id, ws);
 
   ws.onopen = () => {
@@ -153,14 +172,23 @@ function connect(id) {
   };
 }
 
-function send(id, text) {
+function send(id, text, images) {
   const ws = wsMap.get(id);
   const s = sessions.find((x) => x.id === id);
+  const t = text || '';
+  const imgs = Array.isArray(images) && images.length ? images : null;
   // Title a session from its first real message.
-  if (s && (!s.title || s.title === 'New chat')) patch(id, { title: text.replace(/^\/seph-sdlc\s*/, '').slice(0, 40) || 'Chat' });
+  if (s && (!s.title || s.title === 'New chat')) {
+    patch(id, { title: t.replace(/^\/seph-sdlc\s*/, '').slice(0, 40) || (imgs ? 'Image' : 'Chat') });
+  }
+  // Remember a create kickoff so the app can jump to the initiative once the
+  // pipeline writes its metadata.json.
+  if (CREATE_CMD_RE.test(t)) markPendingCreate();
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'send', text }));
-    appendEvent(id, { kind: 'user', text });
+    const payload = { type: 'send', text: t };
+    if (imgs) payload.images = imgs;
+    ws.send(JSON.stringify(payload));
+    appendEvent(id, { kind: 'user', text: t, images: imgs || undefined });
     patch(id, { busy: true });
   }
 }

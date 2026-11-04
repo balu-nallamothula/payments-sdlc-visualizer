@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { artifactsForStage } from '../lib/artifacts';
+import { jiraPath } from '../lib/paths';
 import { useGit } from '../context/GitContext';
 import { StageBadge } from './StageBadge';
 import { Modal } from './Modal';
@@ -25,6 +27,7 @@ export function StageResults({
   jiraList,
   onJiraStart,
   jiraArtifacts,
+  initiativeId,
 }) {
   const stageArtifacts = useMemo(
     () => (artifacts ? artifactsForStage(artifacts, n) : []),
@@ -112,7 +115,18 @@ export function StageResults({
                     className="row jira-row"
                     style={{ justifyContent: 'space-between', border: '1px solid var(--border)', padding: '10px 12px' }}
                   >
-                    <span className="mono" style={{ color: 'var(--accent)', fontWeight: 600 }}>{j.id}</span>
+                    {initiativeId ? (
+                      <Link
+                        className="mono jira-row-key"
+                        to={jiraPath(initiativeId, j.id)}
+                        style={{ color: 'var(--accent)', fontWeight: 600 }}
+                        title={`Open ${j.id}`}
+                      >
+                        {j.id}
+                      </Link>
+                    ) : (
+                      <span className="mono" style={{ color: 'var(--accent)', fontWeight: 600 }}>{j.id}</span>
+                    )}
                     <div className="row" style={{ gap: 8 }}>
                       <StageBadge status={j.status} />
                       {onJiraStart && (
